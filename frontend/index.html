@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM-VLM Adaptive Drone Framework — Operator Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Top Navigation / Status Header -->
+        <header class="status-bar">
+            <div class="brand">
+                <span class="icon">🛸</span>
+                <h1>LLM–VLM Drone Framework</h1>
+            </div>
+            <div class="status-indicators">
+                <div class="status-item" id="backend-status">
+                    <span class="indicator-dot offline"></span>
+                    <span class="label">Backend: <strong id="backend-text">Connecting...</strong></span>
+                </div>
+                <div class="status-item" id="model-status">
+                    <span class="indicator-dot online"></span>
+                    <span class="label">Model: <strong>Gemini 2.5 Flash</strong></span>
+                </div>
+                <div class="status-item" id="drone-status">
+                    <span class="indicator-dot online"></span>
+                    <span class="label">Drone: <strong id="drone-mode-text">SIMULATOR</strong></span>
+                </div>
+                <div class="status-item" id="battery-status">
+                    <span class="label">⚡ Battery: <strong id="battery-volts">4.1V (100%)</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="main-content">
+            <!-- Left Panel: Natural Language Command Input & Skill Sequence -->
+            <section class="panel command-panel">
+                <h2>Mission Control</h2>
+                <form id="command-form">
+                    <div class="input-group">
+                        <input type="text" id="command-input" placeholder="Try: take off to 1m and fly in a square" required>
+                        <button type="submit" id="send-btn">Execute Mission</button>
+                    </div>
+                    <div class="input-group mission-actions">
+                        <button type="button" id="clear-path-btn" class="btn-secondary">Clear Path</button>
+                        <button type="button" id="home-btn" class="btn-home">Return Home</button>
+                        <button type="button" id="abort-btn" class="btn-abort">Abort</button>
+                    </div>
+                </form>
+
+                <div class="card reasoning-card">
+                    <h3>AI Reasoning Chain</h3>
+                    <p id="reasoning-output">Waiting for natural language command submission...</p>
+                </div>
+
+                <div class="card timeline-card">
+                    <h3>Generated Skill Sequence</h3>
+                    <ul id="skill-timeline" class="skill-list">
+                        <li class="skill-step empty">No active mission plan.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Right Panel: Telemetry & Spatial Coordinates -->
+            <section class="panel telemetry-panel">
+                <h2>Live Telemetry</h2>
+                <div class="telemetry-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">X Position</span>
+                        <span class="metric-value" id="val-x">0.00 <small>m</small></span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Y Position</span>
+                        <span class="metric-value" id="val-y">0.00 <small>m</small></span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Z Altitude</span>
+                        <span class="metric-value" id="val-z">0.00 <small>m</small></span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Yaw Heading</span>
+                        <span class="metric-value" id="val-yaw">0.0 <small>°</small></span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Flight State</span>
+                        <span class="metric-value highlight" id="val-state">IDLE</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Planner Status</span>
+                        <span class="metric-value highlight" id="val-planner">IDLE</span>
+                    </div>
+                </div>
+
+                <div class="card camera-card">
+                    <h3>Overhead Arena (top-down XY)</h3>
+                    <div class="video-container">
+                        <div class="synthetic-camera" id="synthetic-feed">
+                            <svg class="arena-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                <rect x="1" y="1" width="98" height="98" fill="none" stroke="#30363d" stroke-dasharray="2 2" />
+                                <line x1="50" y1="1" x2="50" y2="99" stroke="#21262d" />
+                                <line x1="1" y1="50" x2="99" y2="50" stroke="#21262d" />
+                                <polyline id="trail-line" points="" fill="none" stroke="#58a6ff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" />
+                            </svg>
+                            <span class="arena-axis axis-n">+Y</span>
+                            <span class="arena-axis axis-e">+X</span>
+                            <span class="arena-axis axis-home">home</span>
+                            <div class="drone-marker" id="drone-marker">🛸</div>
+                            <div class="target-marker" id="target-marker" style="left: 70%; top: 40%;">🔴 Red Bottle</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/websocket.js"></script>
+    <script src="js/telemetry.js"></script>
+    <script src="js/mission.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.env
+*.slx
+*.slxc
+*.autosave
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+cache/
+LiteWing_repo/
