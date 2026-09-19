@@ -15,6 +15,7 @@ def test_goal_extractor():
     assert goal.hover_duration == 5.0
     assert goal.land_at_end is True
     assert goal.task_type == "SEARCH_HOVER"
+    assert "red bottle" in goal.object_types or "bottle" in goal.object_types
 
 
 def test_object_search_mock():

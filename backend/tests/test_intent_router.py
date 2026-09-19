@@ -42,6 +42,11 @@ class TestIntentRouter(unittest.TestCase):
         self.assertTrue(intent.use_code)
         self.assertEqual(intent.intent, "land")
 
+    def test_plain_find_is_vision(self):
+        intent = parse_intent("find the red bottle")
+        self.assertTrue(intent.vision)
+        self.assertEqual(intent.intent, "vision")
+
     def test_conditional_find_skips_code(self):
         intent = parse_intent(
             "Find the red bottle. If it is visible, circle it once and return home. Otherwise hover and wait"

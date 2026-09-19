@@ -16,6 +16,7 @@ from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.capabilities import RobotCapabilities
 from backend.vision.spatial_grounding import SpatialGrounding
 from backend.planning.safety_validator import SafetyValidator
+from backend.planning.control_platform import finalize_skills
 from backend.core.logger import get_logger
 
 logger = get_logger("UAV-VLA")
@@ -26,9 +27,14 @@ class VLAMissionGoal:
     raw_command: str
     task_type: str  # "SEARCH_HOVER", "INSPECT", "NAVIGATE", "PATROL"
     target_object: Optional[str] = None
+    object_types: List[str] = None
     target_altitude: float = 1.0
     hover_duration: float = 3.0
     land_at_end: bool = False
+
+    def __post_init__(self):
+        if self.object_types is None:
+            self.object_types = [self.target_object] if self.target_object else []
 
 
 class GoalExtractor:
@@ -76,6 +82,13 @@ class GoalExtractor:
                     target = word
                     break
 
+        object_types: List[str] = []
+        for word in ("red bottle", "blue cube", "bottle", "cube", "barrel", "box", "chair"):
+            if word in cmd and word not in object_types:
+                object_types.append(word)
+        if target and target not in object_types:
+            object_types.insert(0, target)
+
         task_type = "NAVIGATE"
         if target:
             task_type = "SEARCH_HOVER" if not re.search(r"\bcircle\b", cmd) else "SEARCH_CIRCLE"
@@ -84,11 +97,15 @@ class GoalExtractor:
             raw_command=command,
             task_type=task_type,
             target_object=target,
+            object_types=object_types,
             target_altitude=alt,
             hover_duration=hover_s,
             land_at_end=land_at_end,
         )
-        logger.info(f"[UAV-VLA: GoalExtractor] Extracted Goal: type={goal.task_type}, target='{goal.target_object}', alt={goal.target_altitude}m")
+        logger.info(
+            f"[UAV-VLA: GoalExtractor] Extracted Goal: type={goal.task_type}, "
+            f"target='{goal.target_object}', types={goal.object_types}, alt={goal.target_altitude}m"
+        )
         return goal
 
 
@@ -174,12 +191,18 @@ class ActionsGenerator:
         if goal.land_at_end:
             skills.append(SkillPrimitive(skill="LAND", params={}))
 
+        if capabilities:
+            skills, spec, nelv = finalize_skills(skills, capabilities.workspace, None, None)
+        else:
+            spec, nelv = None, []
+
         plan = MissionPlan(
             raw_command=goal.raw_command,
             reasoning=f"UAV-VLA generated {len(skills)} actions for target '{goal.target_object}' at ({tx:.2f}, {ty:.2f}, {flight_z:.2f})m.",
             skills=skills,
             source="uav-vla",
-            pipeline=["uav-vla-goal-extractor", "uav-vla-object-search", "uav-vla-actions-generator"],
+            spec=spec,
+            pipeline=["uav-vla-goal-extractor", "uav-vla-object-search", "uav-vla-actions-generator"] + nelv,
         )
 
         if capabilities:
@@ -187,9 +210,8 @@ class ActionsGenerator:
         validation = self.validator.validate_plan(plan)
         if validation.is_valid:
             return validation.validated_plan or plan
-        else:
-            logger.warning(f"[UAV-VLA: ActionsGenerator] Plan validation reported warnings: {validation.errors}")
-            return plan
+        logger.warning(f"[UAV-VLA: ActionsGenerator] Plan validation reported warnings: {validation.errors}")
+        return plan
 
 
 class UAVVLAPipeline:

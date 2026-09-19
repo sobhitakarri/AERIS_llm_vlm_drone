@@ -2,6 +2,7 @@
 FastAPI REST & WebSocket Route Handlers (Pydantic V2 Compatible).
 """
 import asyncio
+import re
 import time
 from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -29,10 +30,12 @@ app_context = {
     "camera_manager": None,
     "grounding": None,
     "event_bus": None,
+    "replan": None,
+    "perception_loop": None,
     "model_mode": "gemini",
     "stream_source": "webcam",
     "drone_backend": "sim",
-    "drone_uri": "udp://192.168.43.42:1988",
+    "drone_uri": "udp://192.168.43.42",
     "refresh_viewer": False,
     "capabilities": RobotCapabilities(),
 }
@@ -53,7 +56,7 @@ class StreamConfigRequest(BaseModel):
 
 class DroneConfigRequest(BaseModel):
     drone_backend: str  # "litewing" | "sim" | "pysimverse" | "matlab"
-    drone_uri: Optional[str] = None  # e.g. "udp://192.168.43.42:1988"
+    drone_uri: Optional[str] = None  # e.g. "udp://192.168.43.42"
 
 
 @router.get("/api/health")
@@ -92,7 +95,7 @@ async def get_config():
         "stream_source": app_context.get("stream_source", "webcam"),
         "camera_index": getattr(cam, "camera_index", 0) if cam else 0,
         "drone_backend": app_context.get("drone_backend", "sim"),
-        "drone_uri": app_context.get("drone_uri", "udp://192.168.43.42:1988"),
+        "drone_uri": app_context.get("drone_uri", "udp://192.168.43.42"),
         "drone_connected": is_drone_connected,
         "drone_class": type(drone).__name__ if drone else "None",
         "geofence": caps.workspace.model_dump() if caps else {},
@@ -149,10 +152,12 @@ async def set_stream_config(req: StreamConfigRequest):
 
     cam = app_context.get("camera_manager")
     if req.camera_index is not None and cam:
-        cam.camera_index = req.camera_index
-        if cam.cap:
+        if int(req.camera_index) != int(getattr(cam, "camera_index", -1)):
+            cam.camera_index = req.camera_index
             cam.stop()
             cam.start()
+        else:
+            cam.camera_index = req.camera_index
 
     return {
         "success": True,
@@ -164,7 +169,7 @@ async def set_stream_config(req: StreamConfigRequest):
 @router.post("/api/config/drone")
 async def set_drone_config(req: DroneConfigRequest):
     backend = req.drone_backend.lower().strip()
-    uri = req.drone_uri or app_context.get("drone_uri", "udp://192.168.43.42:1988")
+    uri = req.drone_uri or app_context.get("drone_uri", "udp://192.168.43.42")
     logger.info(f"[AERIS Config] Switching drone backend to '{backend}' (uri: '{uri}')")
 
     old_drone = app_context.get("drone")
@@ -211,6 +216,16 @@ async def set_drone_config(req: DroneConfigRequest):
     executor = app_context.get("executor")
     if executor:
         executor.drone = new_drone
+
+    # The perception loop reads altitude/frames from the drone, so it must not
+    # keep pointing at the backend we just disconnected.
+    loop = app_context.get("perception_loop")
+    if loop:
+        loop.drone = new_drone
+
+    replan = app_context.get("replan")
+    if replan:
+        replan.reset_mission()
 
     return {
         "success": connected,
@@ -276,6 +291,43 @@ async def get_capabilities():
     return app_context["capabilities"].model_dump()
 
 
+_TARGET_TAIL = re.compile(
+    r"\s+(?:and|then|while|so|to|for|at|in|on|over|under|near|beside|next)\b.*$"
+)
+
+
+def _clean_target(label: str) -> Optional[str]:
+    """Trims the trailing action phrase off an extracted target.
+
+    Intent parsing returns everything after the verb, so "find the orange
+    traffic cone and hover over it" yields a label with the instruction still
+    attached — which then gets sent to the VLM as an object description.
+    """
+    text = (label or "").strip().strip(".,!?").lower()
+    text = _TARGET_TAIL.sub("", text).strip()
+    if not text or len(text) > 40 or len(text.split()) > 4:
+        return None
+    return text
+
+
+def _targets_for(command: str, intent) -> list:
+    """Object labels this mission should keep tracked, most specific first."""
+    labels = []
+    cleaned = _clean_target(getattr(intent, "target", None))
+    if cleaned:
+        labels.append(cleaned)
+    try:
+        from backend.planning.vla_pipeline import GoalExtractor
+        goal = GoalExtractor().extract_goal(command)
+        for obj in (goal.object_types or []):
+            obj = _clean_target(obj)
+            if obj and obj not in labels:
+                labels.append(obj)
+    except Exception as exc:
+        logger.warning(f"Could not derive perception targets: {exc}")
+    return labels
+
+
 @router.post("/api/command")
 async def submit_command(req: CommandRequest):
     logger.info(f"Received API command request: '{req.command}'")
@@ -286,6 +338,13 @@ async def submit_command(req: CommandRequest):
 
     if not planner or not llm or not executor:
         return {"success": False, "error": "System not initialized."}
+
+    if executor.is_busy():
+        return {
+            "success": False,
+            "error": "A mission is already in flight. Abort it before sending a new command.",
+            "raw_command": req.command,
+        }
 
     planner.start_mission(req.command)
 
@@ -311,10 +370,19 @@ async def submit_command(req: CommandRequest):
         if cam_ref and hasattr(cam_ref, "read_frame"):
             frame = cam_ref.read_frame()
 
-    # Use intent router to determine if this requires visual grounding / VLA pipeline
     from backend.planning.intent_router import parse_intent
     intent = parse_intent(req.command, context)
-    is_visual_target = intent.intent in ("find", "inspect") or (intent.target is not None and intent.intent != "shape")
+    is_visual_target = bool(intent.vision) or intent.intent == "vision"
+
+    replan = app_context.get("replan")
+    if replan:
+        replan.reset_mission()
+
+    # Point the perception loop at this mission's objects so the VLM seeds a
+    # tracker for them instead of a hardcoded red/blue list.
+    perception = app_context.get("perception")
+    if perception and hasattr(perception, "set_targets"):
+        perception.set_targets(_targets_for(req.command, intent))
 
     if vla and is_visual_target:
         logger.info("[APIRoutes] Dispatching visual command to UAV-VLA pipeline...")
@@ -426,6 +494,12 @@ async def telemetry_websocket(websocket: WebSocket):
             monitor = app_context.get("monitor")
             if monitor:
                 payload["monitor"] = monitor.snapshot()
+            replan = app_context.get("replan")
+            if replan:
+                payload["replan"] = replan.snapshot()
+            planner_ref = app_context.get("planner")
+            if planner_ref:
+                payload["replan_count"] = getattr(planner_ref, "replan_count", 0)
 
             state_mgr = app_context.get("state_manager")
             if state_mgr:

@@ -11,6 +11,10 @@ from backend.models.base_vlm import VLMProvider
 from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.capabilities import RobotCapabilities
 from backend.schemas.perception import DetectedObject, BoundingBox
+from backend.vision.bbox_convert import (
+    plausibility as bbox_plausibility,
+    to_pixels as bbox_to_pixels,
+)
 from backend.planning.skill_dsl import SkillDSL
 from backend.planning.shape_paths import (
     clamp_z,
@@ -377,23 +381,44 @@ class GeminiProvider(LLMProvider, VLMProvider):
                         data = _extract_json(raw_text)
                         logger.info(f"Gemini VLM response ({model_name}): {raw_text[:500]}")
 
-                        bbox_data = data.get("bbox")
+                        if isinstance(data, list):
+                            data = data[0] if data else {}
+                        if not isinstance(data, dict):
+                            logger.info(f"Gemini VLM: unusable response shape for '{target_description}'")
+                            return None
+
+                        bbox_data = (
+                            data.get("bbox") or data.get("box_2d")
+                            or data.get("bounding_box")
+                        )
                         confidence = float(data.get("confidence", 0.0))
 
                         if bbox_data is None or confidence < 0.1:
                             logger.info(f"Gemini VLM: target '{target_description}' not found (conf={confidence})")
                             return None
 
-                        bbox = BoundingBox(
-                            u_min=int(bbox_data.get("u_min", 0)),
-                            v_min=int(bbox_data.get("v_min", 0)),
-                            u_max=int(bbox_data.get("u_max", image_width)),
-                            v_max=int(bbox_data.get("v_max", image_height)),
-                        )
+                        box = self._bbox_to_pixels(bbox_data, image_width, image_height)
+                        if box is None:
+                            logger.warning(
+                                f"Gemini VLM: rejected box {bbox_data} for '{target_description}'"
+                            )
+                            return None
+                        u_min, v_min, u_max, v_max = box
+
+                        gate = bbox_plausibility(u_min, v_min, u_max, v_max, image_width, image_height)
+                        if gate <= 0.0:
+                            logger.warning(
+                                f"Gemini VLM: '{target_description}' box "
+                                f"({u_min},{v_min})-({u_max},{v_max}) failed plausibility gate."
+                            )
+                            return None
+
                         return DetectedObject(
                             label=target_description,
-                            bbox=bbox,
-                            confidence=confidence,
+                            bbox=BoundingBox(u_min=u_min, v_min=v_min, u_max=u_max, v_max=v_max),
+                            # Trust the model's own confidence only as far as the
+                            # box shape supports it.
+                            confidence=round(min(confidence, gate), 2),
                         )
                     except Exception as e:
                         logger.warning(f"Gemini VLM model '{model_name}' failed: {e}")
@@ -403,13 +428,33 @@ class GeminiProvider(LLMProvider, VLMProvider):
             except Exception as e:
                 logger.error(f"Gemini VLM resolve_target error: {e}")
 
-        # Offline fallback: return a centered placeholder detection
-        logger.warning("Gemini VLM offline — returning placeholder detection for development.")
-        cx, cy = image_width // 2, image_height // 2
-        hw, hh = image_width // 8, image_height // 8
-        return DetectedObject(
-            label=target_description,
-            bbox=BoundingBox(u_min=cx - hw, v_min=cy - hh, u_max=cx + hw, v_max=cy + hh),
-            confidence=0.5,
-        )
+        # No placeholder detection here. A fabricated box at frame centre grounds
+        # to the middle of the workspace and the drone flies to it, so "VLM
+        # unavailable" has to surface as "not found".
+        logger.warning("Gemini VLM unavailable — reporting target as not found.")
+        return None
+
+    @staticmethod
+    def _bbox_to_pixels(bbox_data, image_width: int, image_height: int):
+        """Gemini returns either a dict of named edges or, more often, an array in
+        its documented [ymin, xmin, ymax, xmax] order normalised to 0-1000."""
+        if isinstance(bbox_data, dict):
+            if "u_min" in bbox_data:
+                return bbox_to_pixels(
+                    (bbox_data.get("u_min", 0), bbox_data.get("v_min", 0),
+                     bbox_data.get("u_max", image_width), bbox_data.get("v_max", image_height)),
+                    image_width, image_height, order="xyxy",
+                )
+            if "ymin" in bbox_data:
+                return bbox_to_pixels(
+                    (bbox_data.get("ymin", 0), bbox_data.get("xmin", 0),
+                     bbox_data.get("ymax", 0), bbox_data.get("xmax", 0)),
+                    image_width, image_height, order="yxyx", assume="norm1000",
+                )
+            return None
+        if isinstance(bbox_data, (list, tuple)):
+            return bbox_to_pixels(
+                bbox_data, image_width, image_height, order="yxyx", assume="norm1000",
+            )
+        return None
 

@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (connectDroneBtn) {
         connectDroneBtn.addEventListener('click', async () => {
             const uriInput = document.getElementById('drone-uri-input');
-            const uri = uriInput ? uriInput.value.trim() : 'udp://192.168.43.42:1988';
+            const uri = uriInput ? uriInput.value.trim() : 'udp://192.168.43.42';
             const btnText = document.getElementById('btn-connect-text');
 
             if (btnText) btnText.innerText = 'Connecting...';
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedModel = document.querySelector('input[name="cfg-model"]:checked')?.value || 'gemini';
             const selectedStream = document.querySelector('input[name="cfg-stream"]:checked')?.value || 'webcam';
             const selectedDrone = document.querySelector('input[name="cfg-drone"]:checked')?.value || 'sim';
-            const droneUri = document.getElementById('drone-uri-input')?.value.trim() || 'udp://192.168.43.42:1988';
+            const droneUri = document.getElementById('drone-uri-input')?.value.trim() || 'udp://192.168.43.42';
 
             applyBtn.innerText = 'Applying...';
 

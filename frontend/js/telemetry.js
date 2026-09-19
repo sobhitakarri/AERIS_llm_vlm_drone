@@ -207,4 +207,11 @@ function renderTelemetry(packet) {
         const guardObj = document.getElementById('guard-objects');
         if (guardObj) guardObj.innerText = '0';
     }
+
+    const replanChip = document.getElementById('replan-count-chip');
+    if (replanChip) {
+        const n = (packet.replan && packet.replan.count) || packet.replan_count || 0;
+        replanChip.innerText = `replan ${n}`;
+        replanChip.className = n > 0 ? 'badge badge-amber' : 'badge badge-muted';
+    }
 }

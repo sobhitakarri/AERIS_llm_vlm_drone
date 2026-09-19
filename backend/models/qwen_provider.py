@@ -16,6 +16,10 @@ from backend.models.base_vlm import VLMProvider
 from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.capabilities import RobotCapabilities
 from backend.schemas.perception import DetectedObject, BoundingBox
+from backend.vision.bbox_convert import (
+    plausibility as bbox_plausibility,
+    to_pixels as bbox_to_pixels,
+)
 from backend.core.logger import get_logger
 from backend.planning.intent_router import parse_intent
 from backend.planning.local_planner import plan_from_intent
@@ -71,6 +75,9 @@ class QwenProvider(LLMProvider, VLMProvider):
             "options": {
                 "temperature": 0.1,
                 "num_predict": 1024,  # Raised from 512: multi-waypoint plans need more tokens
+                # A single 640x480 frame costs Qwen2-VL several hundred vision
+                # tokens, which overflows Ollama's small default context.
+                "num_ctx": 8192,
             }
         }
         if format_json:
@@ -274,14 +281,18 @@ class QwenProvider(LLMProvider, VLMProvider):
             else:
                 logger.info(f"[Qwen Local VLM] Detected image size: {img_w}x{img_h}")
 
-        # ── Prompt: minimal, no JSON template to avoid literal echoing ────────
+        # Qwen2-VL emits absolute pixel coordinates in (x, y) order, so ask for
+        # exactly that rather than a normalised range it was not trained on.
+        # _to_pixels() still corrects the convention if the model disagrees.
         prompt = (
             f"Where is the {target_description} in this image? "
+            f"The image is {img_w} wide and {img_h} tall. "
             "Reply with ONLY a bounding box array on one line: "
-            "[ymin, xmin, ymax, xmax] "
-            "where all values are integers from 0 to 1000 "
-            "(0=top/left edge, 1000=bottom/right edge). "
-            "No explanation. No JSON keys. Just the array."
+            "[x1, y1, x2, y2] as absolute pixel coordinates, "
+            "where (x1,y1) is the top-left corner and (x2,y2) the bottom-right. "
+            f"x values must be 0-{img_w}, y values 0-{img_h}. "
+            "If the object is not in the image, reply exactly: NOT_FOUND. "
+            "No explanation. Just the array."
         )
 
         messages = [{"role": "user", "content": prompt, "images": [b64_img]}]
@@ -290,43 +301,52 @@ class QwenProvider(LLMProvider, VLMProvider):
             content = self._call_ollama(messages)
             logger.info(f"[Qwen Local VLM] Raw output: {content[:200]}")
 
+            if "not_found" in content.lower():
+                logger.info(f"[Qwen Local VLM] '{target_description}' reported absent.")
+                return None
+
             bbox_vals = self._parse_bbox(content)
-            if bbox_vals:
-                ymin, xmin, ymax, xmax = bbox_vals
-                # Validate — swap if model returned [xmin,ymin,xmax,ymax] order
-                # Heuristic: if ymax < ymin or xmax < xmin, it's malformed
-                if ymax < ymin:
-                    ymin, ymax = ymax, ymin
-                if xmax < xmin:
-                    xmin, xmax = xmax, xmin
-
-                # Scale from [0,1000] to actual pixel coordinates
-                u_min = int(xmin * img_w / 1000)
-                u_max = int(xmax * img_w / 1000)
-                v_min = int(ymin * img_h / 1000)
-                v_max = int(ymax * img_h / 1000)
-
-                # Confidence estimate: larger/more centred boxes are more reliable
-                area_ratio = ((xmax - xmin) * (ymax - ymin)) / (1000 * 1000)
-                confidence = min(0.95, 0.5 + area_ratio * 2)
-
-                bbox = BoundingBox(u_min=u_min, v_min=v_min, u_max=u_max, v_max=v_max)
-                logger.info(
-                    f"[Qwen Local VLM] '{target_description}' → "
-                    f"norm[{ymin},{xmin},{ymax},{xmax}] → "
-                    f"px({u_min},{v_min})-({u_max},{v_max})  conf={confidence:.2f}"
-                )
-                return DetectedObject(
-                    label=target_description,
-                    bbox=bbox,
-                    confidence=round(confidence, 2),
-                )
-            else:
+            if not bbox_vals:
                 logger.warning(f"[Qwen Local VLM] Could not parse bbox from: {content[:100]}")
+                return None
+
+            box = self._to_pixels(bbox_vals, img_w, img_h)
+            if box is None:
+                logger.warning(
+                    "[Qwen Local VLM] Rejected implausible box %s for '%s'.",
+                    bbox_vals, target_description,
+                )
+                return None
+            u_min, v_min, u_max, v_max = box
+
+            plausibility = self._plausibility(u_min, v_min, u_max, v_max, img_w, img_h)
+            if plausibility <= 0.0:
+                logger.warning(
+                    "[Qwen Local VLM] '%s' box px(%d,%d)-(%d,%d) failed plausibility gate.",
+                    target_description, u_min, v_min, u_max, v_max,
+                )
+                return None
+
+            bbox = BoundingBox(u_min=u_min, v_min=v_min, u_max=u_max, v_max=v_max)
+            logger.info(
+                f"[Qwen Local VLM] '{target_description}' → raw{tuple(bbox_vals)} → "
+                f"px({u_min},{v_min})-({u_max},{v_max})  plausibility={plausibility:.2f}"
+            )
+            return DetectedObject(
+                label=target_description,
+                bbox=bbox,
+                confidence=round(plausibility, 2),
+            )
         except Exception as e:
             logger.warning(f"[Qwen Local VLM] Grounding failed: {e}")
 
         return None
+
+    # Qwen emits (x1, y1, x2, y2); conversion itself is shared with Gemini.
+    _to_pixels = staticmethod(
+        lambda vals, img_w, img_h: bbox_to_pixels(vals, img_w, img_h, order="xyxy")
+    )
+    _plausibility = staticmethod(bbox_plausibility)
 
     @staticmethod
     def _parse_bbox(text: str) -> Optional[tuple]:
@@ -334,32 +354,46 @@ class QwenProvider(LLMProvider, VLMProvider):
         Robust bbox parser — handles:
         - Raw array: [472, 0, 675, 514]
         - Markdown-fenced JSON: ```json\n{"bbox": [...]}```
-        - Plain JSON: {"bbox": [...]}
-        - Partial output with any surrounding text
+        - Plain JSON with bbox / bbox_2d (Qwen2.5-VL) keys, object or list
+        - Qwen2-VL grounding tokens: <|box_start|>(x1,y1),(x2,y2)<|box_end|>
         """
         # 1. Strip markdown fences
         text = re.sub(r"```[a-z]*\n?", "", text).strip()
 
-        # 2. Try JSON object with "bbox" key
+        # 2. Qwen2-VL native grounding format: (x1,y1),(x2,y2)
+        m = re.search(
+            r"\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)\s*,?\s*"
+            r"\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)",
+            text,
+        )
+        if m:
+            return tuple(float(g) for g in m.groups())
+
+        # 3. JSON, either an object or a list of detections
         try:
             j = json.loads(text)
-            b = j.get("bbox") or j.get("bounding_box") or j.get("box")
-            if b and len(b) == 4:
-                return tuple(int(v) for v in b)
+            if isinstance(j, list) and j:
+                j = j[0]
+            if isinstance(j, dict):
+                b = (
+                    j.get("bbox_2d") or j.get("bbox")
+                    or j.get("bounding_box") or j.get("box")
+                )
+                if b and len(b) == 4:
+                    return tuple(float(v) for v in b)
         except Exception:
             pass
 
-        # 3. Try bare array anywhere in text
-        m = re.search(r"\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]", text)
+        # 4. Bare array anywhere in the text
+        m = re.search(
+            r"\[\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*"
+            r"(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\]",
+            text,
+        )
         if m:
-            return tuple(map(int, m.groups()))
+            return tuple(float(g) for g in m.groups())
 
-        # 4. Try 4 consecutive integers (space or comma separated)
-        nums = re.findall(r"\d+", text)
-        if len(nums) >= 4:
-            vals = [int(n) for n in nums[:4]]
-            if all(0 <= v <= 1000 for v in vals):
-                return tuple(vals)
-
+        # Deliberately no "first four integers anywhere" fallback: it turned
+        # prose like "I see 2 objects in this 640 by 480 image" into a bbox.
         return None
 

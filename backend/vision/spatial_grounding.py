@@ -1,8 +1,14 @@
 """
 Spatial Grounding — Homography Matrix Transformation (Pixel -> Physical World).
 """
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import List, Optional, Tuple
+
 import numpy as np
-from typing import Tuple
+
 
 
 class SpatialGrounding:
@@ -48,6 +54,29 @@ class SpatialGrounding:
         world_x = world_vec[0] / denom
         world_y = world_vec[1] / denom
         return round(float(world_x), 3), round(float(world_y), 3), round(float(z_altitude), 3)
+
+    def load(self, path: Path | str) -> None:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        self.img_w = int(data.get("img_w", self.img_w))
+        self.img_h = int(data.get("img_h", self.img_h))
+        if data.get("H"):
+            self.H = np.array(data["H"], dtype=np.float32)
+            return
+        src = np.float32(data["src_px"])
+        dst = np.float32(data["dst_m"])
+        self.H, _ = cv2_find_homography(src, dst, float(self.img_w), float(self.img_h))
+
+    def save(self, path: Path | str, src_px: Optional[List] = None, dst_m: Optional[List] = None) -> None:
+        payload = {
+            "img_w": self.img_w,
+            "img_h": self.img_h,
+            "H": self.H.tolist(),
+            "src_px": src_px or [],
+            "dst_m": dst_m or [],
+        }
+        dest = Path(path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def cv2_find_homography(src_pts, dst_pts, w: float = 640.0, h: float = 480.0, ext: float = 1.5):

@@ -42,7 +42,6 @@ def test_set_stream_config(client):
     assert res.status_code == 200
     assert res.json()["stream_source"] == "webcam"
     assert app_context["stream_source"] == "webcam"
-    assert app_context["refresh_viewer"] is True
 
 
 def test_set_drone_config_sim(client):

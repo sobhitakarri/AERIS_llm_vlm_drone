@@ -9,6 +9,7 @@ logger = get_logger("EventBus")
 # Standard event names
 EVENT_DRONE_TELEMETRY = "drone_telemetry"
 EVENT_OBJECT_DETECTED = "object_detected"
+EVENT_TARGET_LOST = "target_lost"
 EVENT_STEP_STARTED = "step_started"
 EVENT_STEP_COMPLETED = "step_completed"
 EVENT_MISSION_FINISHED = "mission_finished"

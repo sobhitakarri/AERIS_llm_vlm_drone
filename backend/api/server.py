@@ -16,9 +16,13 @@ from backend.models.gemini_provider import GeminiProvider
 from backend.models.qwen_provider import QwenProvider
 from backend.models.qwen25_llm_provider import Qwen25LLMProvider
 from backend.runtime.state_manager import StateManager
-from backend.runtime.event_bus import event_bus
+from backend.runtime.event_bus import EVENT_MISSION_FINISHED, EVENT_TARGET_LOST, event_bus
 from backend.vision.camera_manager import CameraManager
 from backend.vision.spatial_grounding import SpatialGrounding
+from backend.vision.fast_cv import FastPerception
+from backend.vision.perception_loop import PerceptionLoop
+from backend.runtime.replan_manager import ReplanManager
+from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.core.config import settings
 from backend.core.logger import get_logger
 
@@ -66,7 +70,16 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
 
     # Initialize Vision, State & Event Subsystems
     camera_manager = CameraManager()
+    camera_manager.start()
     grounding = SpatialGrounding()
+    from pathlib import Path
+    _h_path = Path(__file__).resolve().parents[2] / "cache" / "homography.json"
+    if _h_path.is_file():
+        try:
+            grounding.load(_h_path)
+            logger.info("Loaded calibrated homography from %s", _h_path)
+        except Exception as exc:
+            logger.warning("Homography load failed (%s); using default H.", exc)
     state_manager = StateManager()
 
     # Initialize LLM/VLM Providers
@@ -100,6 +113,85 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
         event_bus=event_bus,
     )
 
+    # The loop needs the VLM so it can re-detect when a track is lost; CSRT
+    # cannot re-acquire on its own. Calls are rate limited inside TrackerManager.
+    fast_cv = FastPerception(grounding=grounding, vlm=vlm, state_manager=state_manager)
+    perception_loop = PerceptionLoop(
+        perception=fast_cv,
+        camera_manager=camera_manager,
+        drone=drone,
+        event_bus=event_bus,
+    )
+    perception_loop.start()
+
+    def _mission_active() -> bool:
+        return monitor.status == "running" and not monitor.aborted()
+
+    def _on_replan(label: str, info: dict) -> None:
+        # Never resurrect a drone that is on the ground: a replan arriving as the
+        # plan's final LAND runs would otherwise fly it again after landing.
+        grounded = app_context.get("drone") or drone
+        gs = grounded.get_state()
+        if gs.z <= 0.1 or not gs.is_armed:
+            logger.info("[Replan] Ignoring drift for '%s': drone is not airborne.", label)
+            return
+        sm = app_context.get("state_manager") or state_manager
+        if sm and not sm.is_actionable(label):
+            logger.info("[Replan] Ignoring drift for '%s': target is not actionable.", label)
+            return
+        planner.trigger_replan(f"{label} drifted {info.get('drift', 0):.2f}m")
+        ws = (app_context.get("capabilities") or None)
+        xmin, xmax, ymin, ymax = -1.45, 1.45, -1.45, 1.45
+        if ws and getattr(ws, "workspace", None):
+            xmin, xmax = ws.workspace.x_min + 0.05, ws.workspace.x_max - 0.05
+            ymin, ymax = ws.workspace.y_min + 0.05, ws.workspace.y_max - 0.05
+        nx = max(xmin, min(float(info["new_x"]), xmax))
+        ny = max(ymin, min(float(info["new_y"]), ymax))
+        # Read the live backend: the user may have switched drones since startup.
+        active_drone = app_context.get("drone") or drone
+        st = active_drone.get_state()
+        z = max(st.z, 0.5)
+        skills = [
+            SkillPrimitive(skill="MOVE_TO", params={"x": round(nx, 3), "y": round(ny, 3), "z": round(z, 3), "speed": 0.4}),
+            SkillPrimitive(skill="HOVER", params={"t": 2.0}),
+        ]
+        patch = MissionPlan(raw_command=f"replan {label}", reasoning="target drift", skills=skills, source="replan")
+        validation = planner.validator.validate_plan(patch)
+        from backend.planning.planner import PlannerState
+        if not validation.is_valid:
+            logger.warning("[Replan] Rejected unsafe replan: %s", validation.errors)
+            if planner.state == PlannerState.REPLANNING:
+                planner.state = PlannerState.EXECUTING
+            return
+        active_executor = app_context.get("executor") or executor
+        active_executor.inject_replan((validation.validated_plan or patch).skills)
+        if planner.state == PlannerState.REPLANNING:
+            planner.state = PlannerState.EXECUTING
+
+    replan = ReplanManager(
+        event_bus=event_bus,
+        replan_callback=_on_replan,
+        mission_active=_mission_active,
+    )
+    replan.start()
+
+    def _on_mission_finished(_data) -> None:
+        # Stop hunting for mission targets once it is over, otherwise the loop
+        # keeps spending VLM calls on objects nobody is asking about any more.
+        fast_cv.set_targets([])
+        fast_cv.trackers.reset()
+        state_manager.clear_objects()
+
+    def _on_target_lost(data) -> None:
+        label = (data or {}).get("label", "")
+        logger.warning("[Safety] TARGET_LOST '%s' — dropping pending target-directed replan.", label)
+        executor.clear_replan()
+        if state_manager and label:
+            state_manager.mark_lost(label)
+
+    event_bus.subscribe(EVENT_MISSION_FINISHED, _on_mission_finished)
+    event_bus.subscribe(EVENT_TARGET_LOST, _on_target_lost)
+
     # Inject global application context
     app_context["drone"] = drone
     app_context["llm"] = llm
@@ -112,11 +204,17 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
     app_context["camera_manager"] = camera_manager
     app_context["grounding"] = grounding
     app_context["event_bus"] = event_bus
+    app_context["replan"] = replan
+    app_context["perception_loop"] = perception_loop
+    app_context["perception"] = fast_cv
     app_context["model_mode"] = model_mode or "gemini"
     app_context["stream_source"] = "webcam"
     app_context["drone_backend"] = drone_mode or "sim"
     app_context["drone_uri"] = settings.drone_uri
     app_context["refresh_viewer"] = False
+    if not app_context.get("capabilities"):
+        from backend.schemas.capabilities import RobotCapabilities
+        app_context["capabilities"] = RobotCapabilities()
 
     app.include_router(router)
 

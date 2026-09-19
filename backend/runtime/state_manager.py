@@ -25,7 +25,25 @@ class StateManager:
 
     def update_object(self, obj: DetectedObject) -> None:
         with self._lock:
+            obj.actionable = True
             self.perceived_objects[obj.label] = obj
+
+    def mark_lost(self, label: str) -> Optional[DetectedObject]:
+        """TARGET_LOST: keep the last pose for the UI, but strip the coordinates
+        that would otherwise generate a new movement command."""
+        with self._lock:
+            obj = self.perceived_objects.get(label)
+            if obj is None:
+                return None
+            obj.actionable = False
+            obj.world_x = None
+            obj.world_y = None
+            return obj
+
+    def is_actionable(self, label: str) -> bool:
+        with self._lock:
+            obj = self.perceived_objects.get(label)
+            return bool(obj and obj.actionable and obj.world_x is not None)
 
     def get_object(self, label: str) -> Optional[DetectedObject]:
         with self._lock:
@@ -34,6 +52,13 @@ class StateManager:
     def get_all_objects(self) -> List[DetectedObject]:
         with self._lock:
             return list(self.perceived_objects.values())
+
+    def get_actionable_objects(self) -> List[DetectedObject]:
+        with self._lock:
+            return [
+                obj for obj in self.perceived_objects.values()
+                if obj.actionable and obj.world_x is not None
+            ]
 
     def clear_objects(self) -> None:
         with self._lock:
@@ -50,5 +75,5 @@ class StateManager:
                     "confidence": obj.confidence,
                 }
                 for obj in self.perceived_objects.values()
-                if obj.world_x is not None
+                if obj.actionable and obj.world_x is not None
             ]
