@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AERIS — System Architecture Infographic</title>
+  <style>
+    @page { size: A3 landscape; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #ece8df; }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #1c2430;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .poster {
+      width: 1580px;
+      min-height: 1040px;
+      margin: 16px auto;
+      padding: 18px 20px 16px;
+      background: #f7f4ee;
+      border: 1px solid #c9c2b4;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+      border-bottom: 3px solid #1c2430;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    h1 { font-size: 28px; letter-spacing: -0.02em; line-height: 1.1; }
+    h1 em { font-style: normal; color: #0b5f6b; }
+    .lede { font-size: 12.5px; color: #3c4654; margin-top: 4px; max-width: 980px; }
+    .meta { text-align: right; font-size: 10.5px; color: #4a5564; line-height: 1.45; }
+    .meta strong { display: block; font-size: 12px; color: #1c2430; }
+    .flow {
+      display: flex; align-items: center; gap: 6px;
+      background: #1c2430; color: #f7f4ee;
+      padding: 7px 10px; margin-bottom: 12px;
+      font-size: 11px; letter-spacing: 0.04em;
+    }
+    .flow b { color: #7fd4cf; font-weight: 700; }
+    .flow span { opacity: 0.55; }
+
+    .row { display: grid; gap: 8px; margin-bottom: 8px; }
+    .r1 { grid-template-columns: 1.1fr 1.4fr 1.1fr; }
+    .r2 { grid-template-columns: 1.35fr 1fr 1fr 1fr; }
+    .r3 { grid-template-columns: 1.2fr 1.5fr 1.1fr; }
+    .r4 { grid-template-columns: 1.15fr 1.15fr 1.1fr 0.95fr; }
+    .r5 { grid-template-columns: repeat(5, 1fr); }
+
+    .box {
+      background: #fff;
+      border: 1px solid #d5cfc3;
+      padding: 8px 9px 8px;
+      min-height: 0;
+    }
+    .box h2 {
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #0b5f6b; border-bottom: 1px solid #e4ddd0;
+      padding-bottom: 4px; margin-bottom: 6px;
+    }
+    .box h3 { font-size: 11.5px; margin: 5px 0 2px; }
+    .box p, .box li { font-size: 10.5px; line-height: 1.38; color: #2a3340; }
+    .box ul { padding-left: 14px; }
+    .box code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 10px; background: #efeae0; padding: 0 3px;
+    }
+    .accent { background: #0b5f6b; color: #f7f4ee; border-color: #0b5f6b; }
+    .accent h2 { color: #b7ece8; border-color: #147a86; }
+    .accent p, .accent li { color: #e8f4f3; }
+    .accent code { background: #0a4d56; color: #d7f6f3; }
+    .warn { background: #fff8ee; border-color: #e0c48a; }
+    .warn h2 { color: #8a5a10; }
+    .ink { background: #1c2430; color: #f7f4ee; border-color: #1c2430; }
+    .ink h2 { color: #7fd4cf; border-color: #334155; }
+    .ink p, .ink li { color: #d7dde6; }
+    .ink code { background: #2a3344; color: #d7f6f3; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .chip {
+      font-size: 9.5px; padding: 2px 6px;
+      border: 1px solid #c9c2b4; background: #f7f4ee;
+    }
+    .accent .chip { border-color: #147a86; background: #0a4d56; color: #e8f4f3; }
+    .ink .chip { border-color: #445066; background: #2a3344; color: #e8eef6; }
+
+    .stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+    .stage {
+      background: #f7f4ee; border: 1px solid #d5cfc3; padding: 5px 6px;
+    }
+    .stage b { display: block; font-size: 10px; color: #0b5f6b; }
+    .stage span { font-size: 9.5px; color: #3c4654; }
+
+    .pipe {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    }
+    .node {
+      background: #fff; border: 1px solid #c9c2b4; padding: 6px 6px 5px;
+      text-align: left;
+    }
+    .node b { display: block; font-size: 10.5px; }
+    .node span { display: block; font-size: 9.5px; color: #4a5564; margin-top: 2px; }
+    .node.v { background: #0b5f6b; color: #f7f4ee; border-color: #0b5f6b; }
+    .node.v span { color: #c5ece9; }
+    .node.x { background: #fff8ee; border-color: #e0c48a; }
+
+    footer {
+      display: grid; grid-template-columns: 2fr 1.2fr 1.1fr;
+      gap: 8px; margin-top: 2px;
+    }
+    .rules { font-size: 10.5px; line-height: 1.4; }
+    .rules li { margin-bottom: 2px; }
+    @media print {
+      body { background: #fff; }
+      .poster { margin: 0; border: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <article class="poster">
+    <header>
+      <div>
+        <h1>AERIS — <em>Adaptive Embodied Reasoning Indoor System</em></h1>
+        <p class="lede">
+          Natural-language indoor drone stack: the LLM/VLM may only emit Skill DSL JSON.
+          Fast vision is OpenCV (CSRT). The VLM identifies an object once and recovers a lost track.
+          Stale coordinates cannot generate a new movement command.
+        </p>
+      </div>
+      <div class="meta">
+        <strong>Phase-1 architecture · landscape poster</strong>
+        Indoor workspace X/Y ±1.5 m · Z 0.2–1.5 m<br>
+        LiteWing hover clamp 0.20–0.80 m · UDP <code>192.168.43.42</code><br>
+        Backends: sim · MATLAB twin · PySimverse · real LiteWing
+      </div>
+    </header>
+
+    <div class="flow">
+      <b>CLOSED LOOP</b>
+      Operator NL <span>→</span> Intent / VLA / LLM <span>→</span> NeLV finalize <span>→</span> SafetyValidator <span>→</span> MissionExecutor <span>→</span> DroneInterface <span>→</span> Camera + CSRT <span>→</span> Homography (m) <span>→</span> ReplanManager <span>→</span> inject skills
+    </div>
+
+    <div class="row r1">
+      <section class="box accent">
+        <h2>1 · Operator + dashboard</h2>
+        <p><code>frontend/index.html</code> · <code>app.js</code> · <code>telemetry.js</code></p>
+        <ul>
+          <li>Natural-language command box and abort / home.</li>
+          <li>WebSocket <code>/ws/telemetry</code>: pose, battery, planner FSM, monitor, <code>replan_count</code>.</li>
+          <li>MJPEG overlay of live boxes from <code>StateManager</code>.</li>
+          <li>Backend switch: sim / matlab / pysimverse / litewing — rewires executor and perception loop.</li>
+        </ul>
+      </section>
+      <section class="box">
+        <h2>2 · API + process wiring</h2>
+        <p><code>backend/api/server.py</code> · <code>routes.py</code></p>
+        <ul>
+          <li><code>POST /api/command</code> — one mission at a time (<code>executor.is_busy()</code>).</li>
+          <li>Parse intent → if <code>vision</code> then <code>UAVVLAPipeline</code>, else LLM/code-first.</li>
+          <li><code>set_targets()</code> points the 10 Hz loop at this mission’s objects.</li>
+          <li>On <code>EVENT_MISSION_FINISHED</code>: clear targets, reset trackers, clear objects.</li>
+          <li>On <code>EVENT_TARGET_LOST</code>: drop pending replan; strip world coordinates.</li>
+        </ul>
+      </section>
+      <section class="box">
+        <h2>3 · Shared runtime fabric</h2>
+        <ul>
+          <li><code>EventBus</code> — <code>OBJECT_DETECTED</code>, <code>TARGET_LOST</code>, step / abort / finish.</li>
+          <li><code>StateManager</code> — drone pose + objects; only <code>actionable</code> objects may move the drone.</li>
+          <li><code>UavMonitor</code> — NeLV UAV Monitor: arm, step, abort, snapshot.</li>
+          <li><code>MissionPlanner</code> FSM: IDLE → PLANNING → EXECUTING → REPLANNING → DONE / ERROR.</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="row r2">
+      <section class="box">
+        <h2>4 · Understand the command (Obj 1)</h2>
+        <p><code>intent_router.py</code> · <code>local_planner.py</code> · <code>plan_cache.py</code></p>
+        <h3>Code-first</h3>
+        <p>Dictionary / regex: takeoff, land, hover, return, goto, relative, rotate, circle, named shapes. Compound phrases (<code>then</code>, <code>trace</code>, <code>letter</code>) skip the dictionary.</p>
+        <h3>Disk cache</h3>
+        <p><code>cache/mission_plans.json</code> — exact + numeric-template hits. LLM only if both miss.</p>
+        <h3>LLM planners</h3>
+        <p>Gemini Interactions API, or local Qwen2.5-3B (planning) + Qwen2-VL-2B (boxes).</p>
+      </section>
+      <section class="box">
+        <h2>5 · UAV-VLA indoor (vision cmds)</h2>
+        <p><code>vla_pipeline.py</code></p>
+        <ul>
+          <li>GoalExtractor — task type + <code>object_types</code>.</li>
+          <li>ObjectSearchVLM — bbox, never lat/lon.</li>
+          <li>ActionsGenerator — Skill JSON, then NeLV finalize.</li>
+        </ul>
+        <p>Taken from UAV-VLA’s three stages. Refused: satellite tiles, GIS, ArduPilot strings, 34 m outdoor error.</p>
+      </section>
+      <section class="box">
+        <h2>6 · NeLV finalize (Obj 2)</h2>
+        <div class="stages">
+          <div class="stage"><b>Parser</b><span>intent → MissionSpec</span></div>
+          <div class="stage"><b>Route</b><span>POI / object match</span></div>
+          <div class="stage"><b>Path</b><span>densify MOVE_TO hops</span></div>
+          <div class="stage"><b>Control</b><span>TAKEOFF / LAND sandwich, HOVER</span></div>
+          <div class="stage"><b>Monitor</b><span>operator abort</span></div>
+        </div>
+        <p style="margin-top:6px">Adapted from NeLV’s five-stage <em>separation of concerns</em>. Not a clone of the outdoor stack.</p>
+      </section>
+      <section class="box warn">
+        <h2>7 · Safety (Obj 6)</h2>
+        <p><code>safety_validator.py</code> · <code>skill_dsl.py</code></p>
+        <p>Allowed skills only: TAKEOFF, LAND, HOVER, MOVE_TO, ROTATE, CIRCLE, FIND, INSPECT, RETURN. No PWM, no velocity from the VLM.</p>
+        <p>Geofence X/Y ±1.5 m, Z 0.2–1.5 m. CIRCLE radius checked. Every replan is validated again before inject.</p>
+      </section>
+    </div>
+
+    <section class="box" style="margin-bottom:8px">
+      <h2>8 · Perception-action loop (Obj 3–5, 9) — VLM once, OpenCV always</h2>
+      <div class="pipe">
+        <div class="node"><b>CameraManager</b><span>~15 Hz grab thread. Latest frame only. Join before release.</span></div>
+        <div class="node v"><b>VLM identify</b><span>Qwen2-VL / Gemini. Absolute pixels or 0–1000 yxyx. Plausibility gate rejects whole-image boxes.</span></div>
+        <div class="node"><b>CSRT tracker</b><span>~46 FPS @ 640×480. Class/colour agnostic. KCF fallback. MIL rejected (never reports loss).</span></div>
+        <div class="node"><b>Health checks</b><span>Scale ×3, aspect ×2.5, jump 35% diagonal, NCC debounce 5 frames.</span></div>
+        <div class="node"><b>Homography H</b><span>Pixel centre → (X,Y) m. Load/save <code>cache/homography.json</code>.</span></div>
+        <div class="node"><b>StateManager</b><span>Live objects. <code>actionable=false</code> strips world_x/y.</span></div>
+        <div class="node x"><b>Lock</b><span>TRACKING → anomaly keep · confirmed fail SEEKING · VLM miss TARGET_LOST · hold, no MOVE_TO</span></div>
+      </div>
+    </section>
+
+    <div class="row r3">
+      <section class="box">
+        <h2>9 · Mission executor</h2>
+        <p><code>mission_executor.py</code></p>
+        <ul>
+          <li>Sequential Skill dispatch. Unknown skill = fail.</li>
+          <li>FIND / INSPECT: live VLM or actionable state only.</li>
+          <li>TARGET_LOST → hover in place (never last-known pose).</li>
+          <li><code>inject_replan</code> inserts after the current step and keeps the tail (LAND is never dropped).</li>
+          <li>Replan queued during LAND is discarded.</li>
+          <li>Step failure: controlled land, then e-stop.</li>
+        </ul>
+      </section>
+      <section class="box warn">
+        <h2>10 · Replan (Obj 10) — AutoFly loop, UAV-VLA actions</h2>
+        <p><code>replan_manager.py</code> · <code>_on_replan</code> in <code>server.py</code></p>
+        <ul>
+          <li>Anchor = pose the plan was built around (not previous frame).</li>
+          <li>Drift ≥ 0.3 m for 3 consecutive detections, 2 s cooldown, max 3 / mission.</li>
+          <li>Ignored if drone on ground, disarmed, or target not actionable.</li>
+          <li>Emits MOVE_TO + HOVER through SafetyValidator, then inject.</li>
+        </ul>
+        <p>Taken from AutoFly: continuous observation while flying. Refused: RGB→velocity VLA, PWM from the model.</p>
+      </section>
+      <section class="box ink">
+        <h2>Skill DSL — the only language the models may speak</h2>
+        <div class="chips">
+          <span class="chip">TAKEOFF z</span>
+          <span class="chip">LAND</span>
+          <span class="chip">HOVER t</span>
+          <span class="chip">MOVE_TO x y z</span>
+          <span class="chip">ROTATE angle</span>
+          <span class="chip">CIRCLE radius</span>
+          <span class="chip">FIND target</span>
+          <span class="chip">INSPECT target</span>
+          <span class="chip">RETURN</span>
+        </div>
+        <p style="margin-top:6px">Same JSON for sim, MATLAB twin, PySimverse, and the physical LiteWing. Python never writes motor PWM.</p>
+      </section>
+    </div>
+
+    <div class="row r4">
+      <section class="box">
+        <h2>11a · SimInterface</h2>
+        <p>In-process mock. Instant takeoff / goto / land. Used by the 150-test suite and the dashboard default.</p>
+      </section>
+      <section class="box">
+        <h2>11b · MATLAB digital twin</h2>
+        <p>Newton–Euler 6-DOF + cascaded PID. Python UDP 5005 commands / 5006 telemetry. Simulink + Aerospace Blockset for 3D. UDP chosen over TCP: no retransmission stall on a 50 Hz loop.</p>
+      </section>
+      <section class="box">
+        <h2>11c · PySimverse</h2>
+        <p>Unity camera + RC. <code>get_frame()</code> for VLA when stream source is simverse.</p>
+      </section>
+      <section class="box">
+        <h2>11d · LiteWing (real)</h2>
+        <p><code>cflib</code> CRTP <code>udp://192.168.43.42</code>. Firmware: Circuit-Digest ESP-Drone. Optical-flow dead reckoning (scale 3.7). Hover setpoints only. Battery &lt; 3.40 V refuses flight. High-level commander unlock on connect.</p>
+      </section>
+    </div>
+
+    <div class="row r5">
+      <section class="box"><h2>Rates</h2>
+        <p>Control 50 Hz · flow 100 Hz · camera ~15 Hz · perception 10 Hz · VLM re-confirm 8 s · miss backoff 3→60 s</p>
+      </section>
+      <section class="box"><h2>Tracker bench</h2>
+        <p>CSRT 45.9±9 FPS, IoU 0.96; reports loss; no re-acquire. KCF 197 FPS IoU 0.80. MIL never reports loss (rejected). See <code>Research_Benchmarks.xlsx</code>.</p>
+      </section>
+      <section class="box"><h2>VLM box hygiene</h2>
+        <p>Shared <code>bbox_convert.py</code>. Gemini 0–1000 yxyx asserted. Qwen asked for absolute pixels. No prose-integer parse. Offline Gemini returns not-found, never a fake centre box.</p>
+      </section>
+      <section class="box"><h2>What we refused</h2>
+        <p>Outdoor lat/lon. End-to-end velocity VLA. VLM every frame. LLM PWM. Two concurrent missions. Flying after LAND via late replan.</p>
+      </section>
+      <section class="box"><h2>Tests</h2>
+        <p>150 unit tests: intent, VLA, NeLV, CSRT lock, TARGET_LOST hold, replan insert-not-truncate, static name resolution (catches missing <code>MAX_HOVER_Z</code>).</p>
+      </section>
+    </div>
+
+    <footer>
+      <div class="rules">
+        <strong>Hard rules (architecture contract)</strong>
+        <ul>
+          <li>Models emit Skill JSON only. Fast loop never calls Gemini/Qwen every frame.</li>
+          <li>Grounding is metres in the room, never lat/lon.</li>
+          <li>Replan must pass SafetyValidator. Concurrent commands are rejected.</li>
+          <li>TARGET_LOST: stale visual information cannot independently generate a movement command.</li>
+        </ul>
+      </div>
+      <div class="rules">
+        <strong>References adapted, not cloned</strong>
+        <p>UAV-VLA (HRI 2025) — 3-stage goal / search / actions.<br>
+        AutoFly-VLA (ICLR 2026) — continuous observation + replan.<br>
+        NeLV — five-stage planner split.<br>
+        Circuit-Digest LiteWing — flow odometry + hover math.</p>
+      </div>
+      <div class="rules">
+        <strong>How to use this poster</strong>
+        <p>Open in a browser → Print → A3 landscape, or screenshot at 100% zoom (1580×1040 CSS px). Regenerated from the live codebase, not the older design-only diagram.</p>
+      </div>
+    </footer>
+  </article>
+</body>
+</html>

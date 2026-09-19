@@ -153,14 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    if (btnText) btnText.innerText = 'Connected ✓';
-                    connectDroneBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    if (btnText) btnText.innerText = 'Connected';
+                    connectDroneBtn.style.background = 'var(--sage-deep)';
                     showToast(`Connected to LiteWing at ${uri}!`);
                     if (typeof addLogEntry === 'function') addLogEntry(`ESP32 connected: ${uri}`, 'info');
                     fetchSystemConfig();
                 } else {
                     if (btnText) btnText.innerText = 'Retry';
-                    connectDroneBtn.style.background = 'linear-gradient(135deg, #f43f5e, #be123c)';
+                    connectDroneBtn.style.background = 'var(--rust)';
                     showToast(data.error || 'Connection failed.', true);
                     if (typeof addLogEntry === 'function') addLogEntry('ESP32 connection failed.', 'error');
                 }
@@ -252,7 +252,7 @@ async function fetchSystemConfig() {
 
         if (badgeDrone) {
             const dName = names[data.drone_backend] || data.drone_backend;
-            badgeDrone.innerText = data.drone_connected ? `${dName} ✓` : dName;
+            badgeDrone.innerText = data.drone_connected ? `${dName} · linked` : dName;
         }
         if (dotDrone) {
             dotDrone.className = data.drone_connected ? 'pill-dot online' : 'pill-dot offline';

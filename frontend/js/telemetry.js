@@ -70,11 +70,11 @@ function updateAltitudeGauge(z) {
 
         // Color shifts at thresholds
         if (z > 1.3) {
-            fill.style.background = 'linear-gradient(180deg, #ef4444, rgba(239,68,68,0.3))';
+            fill.style.background = 'var(--rust)';
         } else if (z > 1.0) {
-            fill.style.background = 'linear-gradient(180deg, #f59e0b, rgba(245,158,11,0.3))';
+            fill.style.background = 'var(--warn)';
         } else {
-            fill.style.background = 'linear-gradient(180deg, #38bdf8, rgba(56,189,248,0.3))';
+            fill.style.background = 'var(--sage)';
         }
     }
 }

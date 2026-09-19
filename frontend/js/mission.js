@@ -10,10 +10,10 @@ function showToast(message, isError = false) {
     toastMsg.innerText = message;
     const dot = toast.querySelector('.toast-dot');
     if (dot) {
-        dot.style.background = isError ? 'var(--red)' : 'var(--sky)';
-        dot.style.boxShadow = isError ? '0 0 8px var(--red)' : '0 0 8px var(--sky)';
+        dot.style.background = isError ? 'var(--rust)' : 'var(--sage)';
+        dot.style.boxShadow = 'none';
     }
-    toast.style.borderColor = isError ? 'var(--red)' : 'var(--sky)';
+    toast.style.borderColor = isError ? 'var(--rust)' : 'var(--line)';
     toast.style.display = 'flex';
 
     clearTimeout(toast._hideTimer);
@@ -26,7 +26,7 @@ async function submitNaturalLanguageCommand(rawCommand) {
     const stepCountElem = document.getElementById('step-count');
     const pipelineBadge = document.getElementById('pipeline-badge');
 
-    if (reasoningElem) reasoningElem.innerText = 'Analyzing command with AERIS reasoning engine...';
+    if (reasoningElem) reasoningElem.innerText = 'Reading the instruction…';
     if (timelineElem) timelineElem.innerHTML = '<div class="step">Decomposing into skill primitives...</div>';
 
     if (typeof addLogEntry === 'function') addLogEntry(`CMD: "${rawCommand}"`, 'info');
@@ -43,7 +43,7 @@ async function submitNaturalLanguageCommand(rawCommand) {
         if (!data.success) {
             const errDetail = data.errors ? data.errors.join(', ') : (data.error || 'Validation error');
             if (reasoningElem) {
-                reasoningElem.innerHTML = `<span style="color:var(--red);font-weight:600;">⚠ Safety Block:</span>\n${errDetail}`;
+                reasoningElem.innerHTML = `<span style="color:var(--rust);font-weight:600;">Held by the fence:</span>\n${errDetail}`;
             }
             if (timelineElem) timelineElem.innerHTML = '<div class="step empty">Blocked by safety validator.</div>';
             showToast('Plan rejected by safety guardrails!', true);
@@ -111,9 +111,9 @@ async function abortMission() {
         const data = await response.json();
         if (data.success) {
             if (reasoningElem) {
-                reasoningElem.innerHTML = '<span style="color:var(--red);font-weight:700;">⚠ EMERGENCY ABORT</span> — Drone disarmed.';
+                reasoningElem.innerHTML = '<span style="color:var(--rust);font-weight:600;">Stopped.</span> Motors cut; the craft is still.';
             }
-            showToast('EMERGENCY ABORT!', true);
+            showToast('Stopped.', true);
             if (typeof addLogEntry === 'function') addLogEntry('ABORT TRIGGERED', 'error');
         }
     } catch (err) {
