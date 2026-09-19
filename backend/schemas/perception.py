@@ -22,6 +22,7 @@ class DetectedObject(BaseModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     world_x: Optional[float] = Field(default=None, description="Grounded physical X position in meters")
     world_y: Optional[float] = Field(default=None, description="Grounded physical Y position in meters")
+    world_z: Optional[float] = Field(default=None, description="Grounded physical Z position (altitude) in meters")
 
 
 class PerceptionResult(BaseModel):

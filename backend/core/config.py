@@ -38,10 +38,19 @@ class Settings(BaseModel):
     version: str = "1.0.0"
     debug: bool = True
 
-    # Backend / Model Choices
-    llm_provider: str = Field(default="gemini", description="Options: gemini, qwen")
-    vlm_provider: str = Field(default="gemini", description="Options: gemini, qwen")
-    drone_backend: str = Field(default="sim", description="Options: sim, real, matlab")
+    # Backend / Model Choices (read from environment, fallback to defaults)
+    llm_provider: str = Field(
+        default_factory=lambda: os.getenv("LLM_PROVIDER", "gemini").strip().lower(),
+        description="Options: gemini, qwen",
+    )
+    vlm_provider: str = Field(
+        default_factory=lambda: os.getenv("VLM_PROVIDER", "gemini").strip().lower(),
+        description="Options: gemini, qwen",
+    )
+    drone_backend: str = Field(
+        default_factory=lambda: os.getenv("DRONE_BACKEND", "sim").strip().lower(),
+        description="Options: sim, real, matlab, pysimverse",
+    )
 
     # API Keys
     gemini_api_key: str = Field(

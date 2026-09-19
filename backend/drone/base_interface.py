@@ -2,6 +2,9 @@
 Abstract Drone Interface — Sim-to-Real Contract.
 """
 from abc import ABC, abstractmethod
+from typing import Optional
+import numpy as np
+
 from backend.schemas.telemetry import DroneState
 
 
@@ -56,6 +59,10 @@ class DroneInterface(ABC):
         """Get current 6-DOF telemetry state."""
         pass
 
+    def get_frame(self) -> Optional[np.ndarray]:
+        """Capture a camera frame. Returns None if no camera is available."""
+        return None
+
     def clear_path(self) -> bool:
         """Clear visualization trails. No-op on backends without a path display."""
         return True
@@ -63,3 +70,4 @@ class DroneInterface(ABC):
     def reset_home(self) -> bool:
         """Snap/return to origin (0, 0, 0) and idle."""
         return self.land()
+

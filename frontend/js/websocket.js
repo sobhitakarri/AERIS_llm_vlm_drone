@@ -27,7 +27,7 @@ class TelemetrySocket {
             };
 
             this.ws.onclose = () => {
-                if (self.onStatusChange) this.onStatusChange(false);
+                if (this.onStatusChange) this.onStatusChange(false);
                 setTimeout(() => this.connect(), 2000);
             };
 

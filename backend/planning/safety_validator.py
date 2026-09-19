@@ -27,6 +27,9 @@ class SafetyValidator:
             errors.append("Mission plan contains no skills.")
             return PlanValidationResult(is_valid=False, errors=errors)
 
+        # Track simulated drone trajectory state to validate relative/spatial skills
+        cur_x, cur_y, cur_z = 0.0, 0.0, 0.0
+
         for i, skill_item in enumerate(plan.skills):
             skill_name = skill_item.skill.upper()
             params = skill_item.params
@@ -42,13 +45,15 @@ class SafetyValidator:
             # 2. Geofence & Bounding Checks
             if skill_name == "TAKEOFF":
                 z = params.get("z", 1.0)
+                cur_z = z
                 if not (bounds.z_min <= z <= bounds.z_max):
                     errors.append(f"Step {i+1}: TAKEOFF altitude {z}m violates bounds [{bounds.z_min}, {bounds.z_max}]m.")
 
             elif skill_name == "MOVE_TO":
-                x = params.get("x", 0.0)
-                y = params.get("y", 0.0)
-                z = params.get("z", 1.0)
+                x = params.get("x", cur_x)
+                y = params.get("y", cur_y)
+                z = params.get("z", cur_z)
+                cur_x, cur_y, cur_z = x, y, z
 
                 if not (bounds.x_min <= x <= bounds.x_max):
                     errors.append(f"Step {i+1}: MOVE_TO X={x}m violates geofence [{bounds.x_min}, {bounds.x_max}]m.")
@@ -58,9 +63,29 @@ class SafetyValidator:
                     errors.append(f"Step {i+1}: MOVE_TO Z={z}m violates altitude limits [{bounds.z_min}, {bounds.z_max}]m.")
 
             elif skill_name == "CIRCLE":
-                radius = params.get("radius", 0.5)
-                if radius > 1.2:
+                radius = float(params.get("radius", 0.5))
+                cx = float(params.get("x", cur_x))
+                cy = float(params.get("y", cur_y))
+
+                if radius <= 0:
+                    errors.append(f"Step {i+1}: CIRCLE radius {radius}m must be positive.")
+                elif radius > 1.2:
                     errors.append(f"Step {i+1}: CIRCLE radius {radius}m exceeds workspace safety limit (1.2m).")
+
+                # Geofence boundary check for the entire perimeter of the circle
+                if (cx - radius < bounds.x_min) or (cx + radius > bounds.x_max):
+                    errors.append(f"Step {i+1}: CIRCLE perimeter on X [{cx - radius:.2f}, {cx + radius:.2f}]m violates geofence [{bounds.x_min}, {bounds.x_max}]m.")
+                if (cy - radius < bounds.y_min) or (cy + radius > bounds.y_max):
+                    errors.append(f"Step {i+1}: CIRCLE perimeter on Y [{cy - radius:.2f}, {cy + radius:.2f}]m violates geofence [{bounds.y_min}, {bounds.y_max}]m.")
+
+            elif skill_name in ("FIND", "INSPECT"):
+                if all(k in params for k in ("x", "y")):
+                    fx, fy = float(params["x"]), float(params["y"])
+                    cur_x, cur_y = fx, fy
+                    if not (bounds.x_min <= fx <= bounds.x_max):
+                        errors.append(f"Step {i+1}: {skill_name} X={fx}m violates geofence [{bounds.x_min}, {bounds.x_max}]m.")
+                    if not (bounds.y_min <= fy <= bounds.y_max):
+                        errors.append(f"Step {i+1}: {skill_name} Y={fy}m violates geofence [{bounds.y_min}, {bounds.y_max}]m.")
 
         is_valid = len(errors) == 0
         if is_valid:

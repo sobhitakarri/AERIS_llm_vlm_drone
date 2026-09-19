@@ -13,8 +13,12 @@ logger = get_logger("Main")
 
 def main():
     parser = argparse.ArgumentParser(description="LLM-VLM Adaptive Drone Framework Server")
-    parser.add_argument("--backend", type=str, default="gemini", choices=["gemini", "qwen"], help="LLM/VLM Model Backend")
-    parser.add_argument("--drone", type=str, default="sim", choices=["sim", "real", "matlab"], help="Drone Execution Target (sim | real | matlab)")
+    parser.add_argument("--backend", type=str, default="gemini",
+                        choices=["gemini", "qwen", "qwen25", "local"],
+                        help="LLM/VLM Model Backend. "
+                             "'qwen'/'qwen25'/'local' = offline split (Qwen2-VL-2B for VLM + Qwen2.5-3B for planning). "
+                             "'gemini' = Gemini Flash API.")
+    parser.add_argument("--drone", type=str, default="sim", choices=["sim", "real", "matlab", "pysimverse"], help="Drone Execution Target (sim | real | matlab | pysimverse)")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address")
     parser.add_argument("--port", type=int, default=8000, help="Port number")
 

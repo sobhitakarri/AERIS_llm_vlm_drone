@@ -3,122 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM-VLM Adaptive Drone Framework — Operator Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>AERIS — Autonomous Drone Flight Deck</title>
+    <meta name="description" content="AERIS v2.0 Autonomous Aerial Flight Control Dashboard — LLM/VLM powered drone mission planning and real-time telemetry">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=2.2">
+    <style>
+        /* Critical base styles to prevent FOUC / stale CSS fallback issues */
+        button { font-family: inherit; }
+        .modal-overlay { display: none !important; }
+        .modal-overlay.open { display: flex !important; }
+        .flight-deck { display: grid; }
+    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Top Navigation / Status Header -->
-        <header class="status-bar">
-            <div class="brand">
-                <span class="icon">🛸</span>
-                <h1>LLM–VLM Drone Framework</h1>
+    <div class="aeris-app">
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             TOP NAVIGATION BAR
+             ═══════════════════════════════════════════════════════════════ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="brand">
+                    <div class="brand-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 19 21 12 17 5 21 12 2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="brand-name">AERIS <span class="brand-ver">v2.0</span></div>
+                        <div class="brand-sub">Autonomous Flight Deck</div>
+                    </div>
+                </div>
+
+                <div class="status-bar">
+                    <div class="pill" id="badge-backend-status">
+                        <span class="pill-dot offline" id="backend-dot"></span>
+                        <span class="pill-label">SYS</span>
+                        <span class="pill-value" id="backend-text">Connecting</span>
+                    </div>
+                    <div class="pill" id="pill-model-status">
+                        <span class="pill-dot online"></span>
+                        <span class="pill-label">AI</span>
+                        <span class="pill-value cyan" id="badge-model">Gemini</span>
+                    </div>
+                    <div class="pill" id="pill-stream-status">
+                        <span class="pill-dot online"></span>
+                        <span class="pill-label">CAM</span>
+                        <span class="pill-value" id="badge-stream">Webcam</span>
+                    </div>
+                    <div class="pill" id="pill-drone-status">
+                        <span class="pill-dot online" id="dot-drone"></span>
+                        <span class="pill-label">UAV</span>
+                        <span class="pill-value sky" id="badge-drone">Simulator</span>
+                    </div>
+                    <div class="pill">
+                        <span class="pill-label">⚡</span>
+                        <span class="pill-value" id="battery-volts">4.1V</span>
+                    </div>
+                </div>
             </div>
-            <div class="status-indicators">
-                <div class="status-item" id="backend-status">
-                    <span class="indicator-dot offline"></span>
-                    <span class="label">Backend: <strong id="backend-text">Connecting...</strong></span>
-                </div>
-                <div class="status-item" id="model-status">
-                    <span class="indicator-dot online"></span>
-                    <span class="label">Model: <strong>Gemini 2.5 Flash</strong></span>
-                </div>
-                <div class="status-item" id="drone-status">
-                    <span class="indicator-dot online"></span>
-                    <span class="label">Drone: <strong id="drone-mode-text">SIMULATOR</strong></span>
-                </div>
-                <div class="status-item" id="battery-status">
-                    <span class="label">⚡ Battery: <strong id="battery-volts">4.1V (100%)</strong></span>
-                </div>
+
+            <div class="topbar-right">
+                <button type="button" class="btn-icon btn-settings" id="open-settings-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Settings</span>
+                </button>
+                <button type="button" class="btn-icon btn-abort" id="abort-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>ABORT</span>
+                </button>
             </div>
         </header>
 
-        <!-- Main Content Layout -->
-        <main class="main-content">
-            <!-- Left Panel: Natural Language Command Input & Skill Sequence -->
-            <section class="panel command-panel">
-                <h2>Mission Control</h2>
-                <form id="command-form">
-                    <div class="input-group">
-                        <input type="text" id="command-input" placeholder="Try: take off to 1m and fly in a square" required>
-                        <button type="submit" id="send-btn">Execute Mission</button>
-                    </div>
-                    <div class="input-group mission-actions">
-                        <button type="button" id="clear-path-btn" class="btn-secondary">Clear Path</button>
-                        <button type="button" id="home-btn" class="btn-home">Return Home</button>
-                        <button type="button" id="abort-btn" class="btn-abort">Abort</button>
-                    </div>
-                </form>
+        <!-- ═══════════════════════════════════════════════════════════════
+             3-ZONE FLIGHT DECK
+             ═══════════════════════════════════════════════════════════════ -->
+        <main class="flight-deck">
 
-                <div class="card reasoning-card">
-                    <h3>AI Reasoning Chain</h3>
-                    <p id="reasoning-output">Waiting for natural language command submission...</p>
-                </div>
+            <!-- ──────────────────────────────────────────────────────────
+                 LEFT PANEL — MISSION CONTROL
+                 ────────────────────────────────────────────────────────── -->
+            <div class="panel panel-left">
 
-                <div class="card timeline-card">
-                    <h3>Generated Skill Sequence</h3>
-                    <ul id="skill-timeline" class="skill-list">
-                        <li class="skill-step empty">No active mission plan.</li>
-                    </ul>
-                </div>
-            </section>
+                <!-- Mission Dispatcher -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">✈️</span> MISSION</div>
+                        <span class="badge badge-blue" id="planner-status-chip">READY</span>
+                    </div>
 
-            <!-- Right Panel: Telemetry & Spatial Coordinates -->
-            <section class="panel telemetry-panel">
-                <h2>Live Telemetry</h2>
-                <div class="telemetry-grid">
-                    <div class="metric-card">
-                        <span class="metric-label">X Position</span>
-                        <span class="metric-value" id="val-x">0.00 <small>m</small></span>
+                    <form id="command-form">
+                        <div class="cmd-input-wrap">
+                            <input type="text" id="command-input" placeholder="Enter flight command..." autocomplete="off" required>
+                            <button type="submit" id="send-btn" class="btn-execute">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                GO
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="macros">
+                        <button type="button" class="macro-chip" data-cmd="takeoff to 1.0m and hover for 4s">🛫 Takeoff</button>
+                        <button type="button" class="macro-chip" data-cmd="find the bottle and inspect it">🔍 Find</button>
+                        <button type="button" class="macro-chip" data-cmd="fly in a circle with radius 0.5m">⭕ Circle</button>
+                        <button type="button" class="macro-chip" data-cmd="fly in a figure 8 pattern">♾️ Fig-8</button>
+                        <button type="button" class="macro-chip" data-cmd="fly in a star pattern">⭐ Star</button>
+                        <button type="button" class="macro-chip" data-cmd="land safely">🛬 Land</button>
                     </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Y Position</span>
-                        <span class="metric-value" id="val-y">0.00 <small>m</small></span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Z Altitude</span>
-                        <span class="metric-value" id="val-z">0.00 <small>m</small></span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Yaw Heading</span>
-                        <span class="metric-value" id="val-yaw">0.0 <small>°</small></span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Flight State</span>
-                        <span class="metric-value highlight" id="val-state">IDLE</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-label">Planner Status</span>
-                        <span class="metric-value highlight" id="val-planner">IDLE</span>
+
+                    <div class="actions-row">
+                        <button type="button" id="clear-path-btn" class="btn-action">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Clear Trail
+                        </button>
+                        <button type="button" id="home-btn" class="btn-action">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                            Home
+                        </button>
                     </div>
                 </div>
 
-                <div class="card camera-card">
-                    <h3>Overhead Arena (top-down XY)</h3>
-                    <div class="video-container">
-                        <div class="synthetic-camera" id="synthetic-feed">
-                            <svg class="arena-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                                <rect x="1" y="1" width="98" height="98" fill="none" stroke="#30363d" stroke-dasharray="2 2" />
-                                <line x1="50" y1="1" x2="50" y2="99" stroke="#21262d" />
-                                <line x1="1" y1="50" x2="99" y2="50" stroke="#21262d" />
-                                <polyline id="trail-line" points="" fill="none" stroke="#58a6ff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" />
+                <!-- AI Reasoning -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">🧠</span> REASONING</div>
+                        <span class="badge badge-muted" id="pipeline-badge">standby</span>
+                    </div>
+                    <div class="reasoning-output" id="reasoning-output">AERIS neural reasoning standby. Submit a flight command above.</div>
+                </div>
+
+                <!-- Skill Primitives Timeline -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">📋</span> SKILL DSL</div>
+                        <span class="badge badge-muted" id="step-count">0 steps</span>
+                    </div>
+                    <div class="timeline" id="skill-timeline">
+                        <div class="step empty">No mission queued.</div>
+                    </div>
+                </div>
+
+                <!-- Event Log -->
+                <div class="card" style="flex:1; min-height:80px;">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">📡</span> EVENT LOG</div>
+                    </div>
+                    <div class="event-log" id="event-log">
+                        <div class="log-entry info"><span class="log-time">--:--</span> System initialized</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ──────────────────────────────────────────────────────────
+                 CENTER PANEL — RADAR / CAMERA
+                 ────────────────────────────────────────────────────────── -->
+            <div class="panel panel-center">
+                <!-- View Tabs -->
+                <div class="view-tabs">
+                    <button type="button" class="tab-btn active" id="tab-arena-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                        2D Radar
+                    </button>
+                    <button type="button" class="tab-btn" id="tab-camera-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Camera
+                        <span class="live-dot">LIVE</span>
+                    </button>
+                    <span style="flex:1"></span>
+                    <span style="font-size:0.7rem; color:var(--text-dim); font-family:var(--font-mono); align-self:center;" id="stream-source-label">Webcam</span>
+                </div>
+
+                <!-- Visual Screen -->
+                <div class="visual-screen">
+                    <!-- HUD Corner Brackets -->
+                    <div class="hud-overlay">
+                        <div class="hud-corner hud-tl"></div>
+                        <div class="hud-corner hud-tr"></div>
+                        <div class="hud-corner hud-bl"></div>
+                        <div class="hud-corner hud-br"></div>
+                    </div>
+
+                    <!-- View 1: 2D Vector Radar -->
+                    <div class="screen-view active" id="view-arena">
+                        <div class="radar-arena" id="synthetic-feed">
+                            <svg class="radar-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.06"/>
+                                        <stop offset="100%" stop-color="#030508" stop-opacity="0"/>
+                                    </radialGradient>
+                                    <linearGradient id="sweep-grad" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>
+                                        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.15"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Background -->
+                                <rect x="0" y="0" width="100" height="100" fill="url(#rg)"/>
+                                <!-- Grid circles -->
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(56,189,248,0.08)" stroke-width="0.5"/>
+                                <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(56,189,248,0.08)" stroke-width="0.5"/>
+                                <circle cx="50" cy="50" r="15" fill="none" stroke="rgba(56,189,248,0.08)" stroke-width="0.5"/>
+                                <!-- Geofence -->
+                                <rect x="3" y="3" width="94" height="94" fill="none" stroke="rgba(56,189,248,0.2)" stroke-width="0.6" stroke-dasharray="2 2"/>
+                                <!-- Crosshair -->
+                                <line x1="50" y1="2" x2="50" y2="98" stroke="rgba(148,163,184,0.1)" stroke-width="0.4"/>
+                                <line x1="2" y1="50" x2="98" y2="50" stroke="rgba(148,163,184,0.1)" stroke-width="0.4"/>
+                                <!-- Sweep -->
+                                <path class="radar-sweep" d="M50,50 L50,5 A45,45 0 0,1 89,28 Z" fill="url(#sweep-grad)" opacity="0.5"/>
+                                <!-- Flight trail -->
+                                <polyline id="trail-line" points="" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
                             </svg>
-                            <span class="arena-axis axis-n">+Y</span>
-                            <span class="arena-axis axis-e">+X</span>
-                            <span class="arena-axis axis-home">home</span>
-                            <div class="drone-marker" id="drone-marker">🛸</div>
-                            <div class="target-marker" id="target-marker" style="left: 70%; top: 40%;">🔴 Red Bottle</div>
+
+                            <span class="axis-label lbl-n">+Y</span>
+                            <span class="axis-label lbl-s">-Y</span>
+                            <span class="axis-label lbl-e">+X</span>
+                            <span class="axis-label lbl-w">-X</span>
+                            <span class="axis-label lbl-origin">⌂ 0,0</span>
+
+                            <div class="drone-blip" id="drone-marker" style="left:50%;top:50%;">
+                                <div class="blip-ring"></div>
+                                <div class="blip-core">🛸</div>
+                            </div>
+
+                            <div class="target-blip" id="target-marker" style="display:none;">
+                                <span style="font-size:1.1rem;">🎯</span>
+                                <span class="target-tag" id="target-tag-label">Target</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View 2: Live Camera -->
+                    <div class="screen-view" id="view-camera">
+                        <div class="camera-wrap">
+                            <img id="live-stream-img" src="/api/video_feed" alt="AERIS Vision">
+                            <div class="stream-standby" id="stream-fallback">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="40" height="40"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <p>Camera Standby</p>
+                                <small>Desktop OpenCV window active</small>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- ──────────────────────────────────────────────────────────
+                 RIGHT PANEL — INSTRUMENTS
+                 ────────────────────────────────────────────────────────── -->
+            <div class="panel panel-right">
+
+                <!-- Flight Mode -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">🔰</span> STATUS</div>
+                        <span class="badge badge-green" id="val-state">IDLE</span>
+                    </div>
+                    <div class="tel-grid">
+                        <div class="tel-cell">
+                            <span class="tel-label">Pos X</span>
+                            <div class="tel-value"><span id="val-x">0.00</span> <small>m</small></div>
+                        </div>
+                        <div class="tel-cell">
+                            <span class="tel-label">Pos Y</span>
+                            <div class="tel-value"><span id="val-y">0.00</span> <small>m</small></div>
+                        </div>
+                        <div class="tel-cell highlight">
+                            <span class="tel-label">Speed</span>
+                            <div class="tel-value"><span id="val-vel">0.00</span> <small>m/s</small></div>
+                        </div>
+                        <div class="tel-cell">
+                            <span class="tel-label">Guard</span>
+                            <div class="tel-value" style="font-size:0.85rem; color:var(--green);" id="guard-status">OK</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Altitude Gauge -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">📐</span> ALTITUDE</div>
+                    </div>
+                    <div class="altitude-gauge">
+                        <div class="alt-labels">
+                            <span class="alt-tick">1.5m</span>
+                            <span class="alt-tick">1.0m</span>
+                            <span class="alt-tick">0.5m</span>
+                            <span class="alt-tick">0.0m</span>
+                        </div>
+                        <div class="alt-bar-track">
+                            <div class="alt-bar-fill" id="alt-fill" style="height:0%"></div>
+                        </div>
+                        <div class="alt-readout">
+                            <div class="val" id="val-z">0.00</div>
+                            <div class="unit">meters</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compass -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">🧭</span> HEADING</div>
+                    </div>
+                    <div class="compass-card">
+                        <svg class="compass-svg" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(56,189,248,0.12)" stroke-width="1"/>
+                            <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(56,189,248,0.06)" stroke-width="0.5"/>
+                            <!-- Cardinal labels -->
+                            <text x="50" y="12" text-anchor="middle" fill="#38bdf8" font-size="7" font-family="JetBrains Mono" font-weight="700">N</text>
+                            <text x="50" y="96" text-anchor="middle" fill="rgba(148,163,184,0.5)" font-size="6" font-family="JetBrains Mono">S</text>
+                            <text x="93" y="53" text-anchor="middle" fill="rgba(148,163,184,0.5)" font-size="6" font-family="JetBrains Mono">E</text>
+                            <text x="7" y="53" text-anchor="middle" fill="rgba(148,163,184,0.5)" font-size="6" font-family="JetBrains Mono">W</text>
+                            <!-- Needle -->
+                            <g class="compass-needle" id="compass-needle">
+                                <line x1="50" y1="18" x2="50" y2="50" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="50" y1="50" x2="50" y2="78" stroke="rgba(148,163,184,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+                                <circle cx="50" cy="50" r="3" fill="rgba(56,189,248,0.5)" stroke="var(--sky)" stroke-width="1"/>
+                            </g>
+                        </svg>
+                        <div class="compass-readout">
+                            <div class="val" id="val-yaw">0.0</div>
+                            <div class="unit">degrees</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Safety Guardrails -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><span class="ico">🛡️</span> GUARDRAILS</div>
+                        <span class="badge badge-green">ACTIVE</span>
+                    </div>
+                    <div class="guard-grid">
+                        <div class="guard-row">
+                            <span class="guard-label">Geofence</span>
+                            <span class="guard-value" id="guard-geofence">[-1.5, +1.5]m</span>
+                        </div>
+                        <div class="guard-row">
+                            <span class="guard-label">Altitude Limit</span>
+                            <span class="guard-value">1.5m</span>
+                        </div>
+                        <div class="guard-row">
+                            <span class="guard-label">Hardware</span>
+                            <span class="guard-value sky" id="sec-hw-target">ESP32-S3</span>
+                        </div>
+                        <div class="guard-row">
+                            <span class="guard-label">Tracked Objects</span>
+                            <span class="guard-value green" id="guard-objects">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             SYSTEM OPTIONS MODAL
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="modal-overlay" id="settings-modal">
+            <div class="modal-window">
+                <div class="modal-top">
+                    <h2>⚙️ System Options</h2>
+                    <button type="button" class="btn-close" id="close-settings-btn">✕</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Model Selection -->
+                    <div class="opt-section">
+                        <div class="opt-header">
+                            <span class="opt-num">1</span>
+                            <div>
+                                <h4>Reasoning Model</h4>
+                                <p>Cloud multimodal or offline local hybrid architecture.</p>
+                            </div>
+                        </div>
+                        <div class="opt-cards">
+                            <label class="opt-card" id="card-model-gemini">
+                                <input type="radio" name="cfg-model" value="gemini" checked>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>Gemini Flash</strong>
+                                        <span class="badge-type cloud">Cloud</span>
+                                    </div>
+                                    <p>Cloud multimodal LLM/VLM. Natural language + complex flight plans.</p>
+                                </div>
+                            </label>
+                            <label class="opt-card" id="card-model-local">
+                                <input type="radio" name="cfg-model" value="local_split">
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>Local Hybrid</strong>
+                                        <span class="badge-type edge">Offline</span>
+                                    </div>
+                                    <p>Split: <code>Qwen2-VL-2B</code> (VLM) + <code>Qwen2.5-3B</code> (LLM).</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Stream Source -->
+                    <div class="opt-section">
+                        <div class="opt-header">
+                            <span class="opt-num">2</span>
+                            <div>
+                                <h4>Vision Stream</h4>
+                                <p>Switching refreshes the OpenCV tracking window.</p>
+                            </div>
+                        </div>
+                        <div class="opt-cards">
+                            <label class="opt-card" id="card-stream-webcam">
+                                <input type="radio" name="cfg-stream" value="webcam" checked>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>Laptop Webcam</strong>
+                                        <span class="badge-type hw">CV #0</span>
+                                    </div>
+                                    <p>Real-world frames for spatial grounding.</p>
+                                </div>
+                            </label>
+                            <label class="opt-card" id="card-stream-pysimverse">
+                                <input type="radio" name="cfg-stream" value="pysimverse">
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>PySimverse 3D</strong>
+                                        <span class="badge-type sim">Unity</span>
+                                    </div>
+                                    <p>Synthetic video from 3D aerospace simulator.</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Drone Backend -->
+                    <div class="opt-section">
+                        <div class="opt-header">
+                            <span class="opt-num">3</span>
+                            <div>
+                                <h4>Flight Platform</h4>
+                                <p>Select target hardware or simulator.</p>
+                            </div>
+                        </div>
+                        <div class="opt-cards">
+                            <label class="opt-card" id="card-drone-litewing">
+                                <input type="radio" name="cfg-drone" value="litewing">
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>LiteWing ESP32</strong>
+                                        <span class="badge-type hw">Real</span>
+                                    </div>
+                                    <p>Physical quadrotor via WiFi UDP.</p>
+                                </div>
+                            </label>
+                            <label class="opt-card" id="card-drone-sim">
+                                <input type="radio" name="cfg-drone" value="sim" checked>
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>Simulator</strong>
+                                        <span class="badge-type sim">6-DOF</span>
+                                    </div>
+                                    <p>Fast virtual simulator for trajectory previewing.</p>
+                                </div>
+                            </label>
+                            <label class="opt-card" id="card-drone-pysimverse">
+                                <input type="radio" name="cfg-drone" value="pysimverse">
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <strong>PySimverse</strong>
+                                        <span class="badge-type sim">Unity</span>
+                                    </div>
+                                    <p>Physics 3D simulation with collision dynamics.</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="hw-connect-bar" id="litewing-config-box" style="display:none;">
+                            <div class="hw-field">
+                                <label for="drone-uri-input">LiteWing ESP32 Address</label>
+                                <input type="text" id="drone-uri-input" value="udp://192.168.43.42:1988" placeholder="udp://192.168.43.42:1988">
+                            </div>
+                            <button type="button" class="btn-connect" id="btn-connect-drone">
+                                <span id="btn-connect-text">Connect</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-bottom">
+                    <button type="button" class="btn-save" id="apply-settings-btn">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast-popup" id="toast-banner">
+            <span class="toast-dot"></span>
+            <span id="toast-msg">Ready.</span>
+        </div>
     </div>
 
-    <script src="js/websocket.js"></script>
-    <script src="js/telemetry.js"></script>
-    <script src="js/mission.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/websocket.js?v=2.2"></script>
+    <script src="js/telemetry.js?v=2.2"></script>
+    <script src="js/mission.js?v=2.2"></script>
+    <script src="js/app.js?v=2.2"></script>
 </body>
 </html>

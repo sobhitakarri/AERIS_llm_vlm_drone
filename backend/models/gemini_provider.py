@@ -344,13 +344,72 @@ class GeminiProvider(LLMProvider, VLMProvider):
         )
         return MissionPlan(raw_command=raw_command, reasoning=reasoning, skills=skills)
 
-    def resolve_target(self, image_bytes: bytes, target_description: str) -> Optional[DetectedObject]:
-        """Performs VLM semantic object identification."""
+    def resolve_target(
+        self, image_bytes: bytes, target_description: str,
+        image_width: int = 640, image_height: int = 480,
+    ) -> Optional[DetectedObject]:
+        """
+        Performs VLM semantic object identification using Gemini Vision API.
+        Falls back to a stub when the client is unavailable.
+        """
         logger.info(f"VLM target resolution query: '{target_description}'")
+
+        if self.client and types is not None:
+            try:
+                prompt = (
+                    f"Find the object '{target_description}' in this image. "
+                    f"Return ONLY a JSON object with the bounding box in this exact format: "
+                    f'{{"label": "{target_description}", "bbox": {{"u_min": <int>, "v_min": <int>, "u_max": <int>, "v_max": <int>}}, "confidence": <float 0-1>}}. '
+                    f"The image is {image_width}x{image_height} pixels. "
+                    f"Coordinates must be pixel values within the image bounds. "
+                    f"If the object is not found, return: {{\"label\": \"{target_description}\", \"bbox\": null, \"confidence\": 0.0}}"
+                )
+                image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+                models_to_try = [self.model_name] + [m for m in GEMINI_MODEL_CANDIDATES if m != self.model_name]
+                for model_name in models_to_try:
+                    try:
+                        response = self.client.models.generate_content(
+                            model=model_name,
+                            contents=[image_part, prompt],
+                            config=types.GenerateContentConfig(response_mime_type="application/json"),
+                        )
+                        raw_text = getattr(response, "text", "") or ""
+                        data = _extract_json(raw_text)
+                        logger.info(f"Gemini VLM response ({model_name}): {raw_text[:500]}")
+
+                        bbox_data = data.get("bbox")
+                        confidence = float(data.get("confidence", 0.0))
+
+                        if bbox_data is None or confidence < 0.1:
+                            logger.info(f"Gemini VLM: target '{target_description}' not found (conf={confidence})")
+                            return None
+
+                        bbox = BoundingBox(
+                            u_min=int(bbox_data.get("u_min", 0)),
+                            v_min=int(bbox_data.get("v_min", 0)),
+                            u_max=int(bbox_data.get("u_max", image_width)),
+                            v_max=int(bbox_data.get("v_max", image_height)),
+                        )
+                        return DetectedObject(
+                            label=target_description,
+                            bbox=bbox,
+                            confidence=confidence,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Gemini VLM model '{model_name}' failed: {e}")
+                        continue
+
+                logger.warning("All Gemini models failed for VLM resolve_target.")
+            except Exception as e:
+                logger.error(f"Gemini VLM resolve_target error: {e}")
+
+        # Offline fallback: return a centered placeholder detection
+        logger.warning("Gemini VLM offline — returning placeholder detection for development.")
+        cx, cy = image_width // 2, image_height // 2
+        hw, hh = image_width // 8, image_height // 8
         return DetectedObject(
             label=target_description,
-            bbox=BoundingBox(u_min=420, v_min=210, u_max=510, v_max=330),
-            confidence=0.93,
-            world_x=0.5,
-            world_y=0.5
+            bbox=BoundingBox(u_min=cx - hw, v_min=cy - hh, u_max=cx + hw, v_max=cy + hh),
+            confidence=0.5,
         )
+
