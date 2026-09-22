@@ -18,7 +18,7 @@ from backend.schemas.capabilities import RobotCapabilities
 from backend.schemas.perception import DetectedObject, BoundingBox
 from backend.vision.bbox_convert import (
     plausibility as bbox_plausibility,
-    to_pixels as bbox_to_pixels,
+    select_qwen_box,
 )
 from backend.core.logger import get_logger
 from backend.planning.intent_router import parse_intent
@@ -281,16 +281,16 @@ class QwenProvider(LLMProvider, VLMProvider):
             else:
                 logger.info(f"[Qwen Local VLM] Detected image size: {img_w}x{img_h}")
 
-        # Qwen2-VL emits absolute pixel coordinates in (x, y) order, so ask for
-        # exactly that rather than a normalised range it was not trained on.
-        # _to_pixels() still corrects the convention if the model disagrees.
+        # This GGUF was trained on Qwen2-VL's 0–1000 boxes. Asking for raw
+        # pixels made it emit 0–1000 numbers that then passed the pixel
+        # overflow check on tall photographs and sat on the wrong half of
+        # the object. Ask for 0–1000 and decode with select_qwen_box.
         prompt = (
-            f"Where is the {target_description} in this image? "
-            f"The image is {img_w} wide and {img_h} tall. "
-            "Reply with ONLY a bounding box array on one line: "
-            "[x1, y1, x2, y2] as absolute pixel coordinates, "
-            "where (x1,y1) is the top-left corner and (x2,y2) the bottom-right. "
-            f"x values must be 0-{img_w}, y values 0-{img_h}. "
+            f"Locate the {target_description} in this image. "
+            "Reply with ONLY a bounding box on one line: [x1, y1, x2, y2] "
+            "using 0-1000 normalised coordinates "
+            "(x=0 left, x=1000 right, y=0 top, y=1000 bottom). "
+            "Fit the box tightly around the object, not the whole image. "
             "If the object is not in the image, reply exactly: NOT_FOUND. "
             "No explanation. Just the array."
         )
@@ -329,7 +329,7 @@ class QwenProvider(LLMProvider, VLMProvider):
 
             bbox = BoundingBox(u_min=u_min, v_min=v_min, u_max=u_max, v_max=v_max)
             logger.info(
-                f"[Qwen Local VLM] '{target_description}' → raw{tuple(bbox_vals)} → "
+                f"[Qwen Local VLM] '{target_description}' raw{tuple(bbox_vals)} -> "
                 f"px({u_min},{v_min})-({u_max},{v_max})  plausibility={plausibility:.2f}"
             )
             return DetectedObject(
@@ -342,10 +342,7 @@ class QwenProvider(LLMProvider, VLMProvider):
 
         return None
 
-    # Qwen emits (x1, y1, x2, y2); conversion itself is shared with Gemini.
-    _to_pixels = staticmethod(
-        lambda vals, img_w, img_h: bbox_to_pixels(vals, img_w, img_h, order="xyxy")
-    )
+    _to_pixels = staticmethod(select_qwen_box)
     _plausibility = staticmethod(bbox_plausibility)
 
     @staticmethod

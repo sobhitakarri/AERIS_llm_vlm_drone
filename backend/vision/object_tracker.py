@@ -31,15 +31,24 @@ _TRACKER_PREFERENCE = ("CSRT", "KCF")
 
 _MAX_SCALE_DRIFT = 3.0      # box may not grow/shrink beyond this factor
 _MAX_ASPECT_DRIFT = 2.5     # nor change shape beyond this
-_MAX_STEP_FRAC = 0.35       # centre may not jump >35% of frame diagonal per update
 _REDETECT_INTERVAL_S = 8.0  # periodic re-detection bounds slow drift
+
+# Displacement is budgeted per second of wall clock, not per update. A fixed
+# fraction of the frame diagonal is far too loose on a small FPV feed: 35% of
+# a 360x240 diagonal is 151 px, about 42% of the frame width, which lets the
+# filter hop onto a different object entirely and call it the same track.
+_MAX_STEP_DIAG_PER_S = 1.5  # target may cross 1.5 frame diagonals per second
+_MIN_STEP_FRAC = 0.06       # floor, so a fast loop does not reject real motion
+_MAX_STEP_FRAC = 0.35       # ceiling, for the first update after a long gap
 
 # Appearance agreement (NCC) against the VLM-confirmed crop is reported as the
 # track's confidence, but it is a noisy per-frame signal: a couple of pixels of
 # box drift on a finely textured object tanks it for one frame. So it only kills
-# a track when it stays low for several consecutive frames.
-_MIN_TEMPLATE_SCORE = 0.10
-_MAX_LOW_APPEARANCE_FRAMES = 5
+# a track when it stays low for several consecutive frames. It is not set near
+# zero either: a 32x32 crop of an unrelated object clears 0.10 by chance, which
+# is how a yaw sweep can swap identity onto a different object unnoticed.
+_MIN_TEMPLATE_SCORE = 0.25
+_MAX_LOW_APPEARANCE_FRAMES = 3
 
 
 class TrackStatus(str, Enum):
@@ -86,6 +95,19 @@ def _make_tracker():
     return None
 
 
+def _as_confidence(score: float) -> float:
+    """Clamps an NCC score into the confidence range `DetectedObject` allows.
+
+    `TM_CCOEFF_NORMED` is defined on [-1, 1] and does go negative when the crop
+    anti-correlates with the template, which is exactly what happens on the
+    suspect frames this score exists to flag. `DetectedObject.confidence` is
+    bounded ge=0, so passing the raw score through raised a pydantic
+    ValidationError and took down the whole perception loop. The health checks
+    keep using the unclamped score; only the reported value is clamped.
+    """
+    return round(max(0.0, min(1.0, float(score))), 2)
+
+
 def _to_xywh(bbox: BoundingBox) -> Tuple[int, int, int, int]:
     return bbox.u_min, bbox.v_min, bbox.u_max - bbox.u_min, bbox.v_max - bbox.v_min
 
@@ -100,6 +122,7 @@ class ObjectTracker:
     _init_area: float = 0.0
     _init_aspect: float = 1.0
     _last_center: Optional[Tuple[float, float]] = None
+    _last_update_t: float = 0.0
     _started_at: float = 0.0
     _frames: int = 0
     _low_appearance: int = 0
@@ -131,6 +154,7 @@ class ObjectTracker:
         self._init_aspect = w / float(max(1, h))
         self._last_center = ((x + w / 2.0), (y + h / 2.0))
         self._started_at = time.time()
+        self._last_update_t = self._started_at
         self._frames = 0
         self._low_appearance = 0
         self.alive = True
@@ -179,13 +203,21 @@ class ObjectTracker:
             if a_ratio > _MAX_ASPECT_DRIFT or a_ratio < 1.0 / _MAX_ASPECT_DRIFT:
                 return self._fail(f"aspect drift x{a_ratio:.1f}")
 
+        now = time.time()
         center = (x + w / 2.0, y + h / 2.0)
         if self._last_center is not None:
             step = ((center[0] - self._last_center[0]) ** 2
                     + (center[1] - self._last_center[1]) ** 2) ** 0.5
-            if step > _MAX_STEP_FRAC * ((fw ** 2 + fh ** 2) ** 0.5):
-                return self._fail(f"implausible jump {step:.0f}px")
+            diag = (fw ** 2 + fh ** 2) ** 0.5
+            dt = max(0.0, now - self._last_update_t) if self._last_update_t else 0.0
+            allowed = min(
+                max(_MAX_STEP_DIAG_PER_S * diag * dt, _MIN_STEP_FRAC * diag),
+                _MAX_STEP_FRAC * diag,
+            )
+            if step > allowed:
+                return self._fail(f"implausible jump {step:.0f}px > {allowed:.0f}px")
         self._last_center = center
+        self._last_update_t = now
 
         score = self._template_score(frame, bbox)
         if score is not None and score < _MIN_TEMPLATE_SCORE:
@@ -202,7 +234,7 @@ class ObjectTracker:
             return TrackUpdate(
                 ok=True,
                 bbox=bbox,
-                confidence=round(float(score), 2),
+                confidence=_as_confidence(score),
                 reason=self.last_reason,
                 status=TrackStatus.TEMPORARY_ANOMALY,
             )
@@ -214,7 +246,7 @@ class ObjectTracker:
         return TrackUpdate(
             ok=True,
             bbox=bbox,
-            confidence=round(float(score) if score is not None else 0.6, 2),
+            confidence=_as_confidence(score) if score is not None else 0.6,
             reason="tracking",
             status=TrackStatus.TRACKING,
         )

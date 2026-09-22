@@ -7,7 +7,9 @@ from backend.runtime.state_manager import StateManager
 from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.perception import BoundingBox, DetectedObject
 from backend.vision.fast_cv import FastPerception
-from backend.vision.object_tracker import ObjectTracker, TargetLock, TrackerManager
+from backend.vision.object_tracker import (
+    ObjectTracker, TargetLock, TrackerManager, TrackStatus,
+)
 from backend.drone.sim_interface import SimInterface
 
 cv2 = pytest.importorskip("cv2")
@@ -122,6 +124,75 @@ def test_health_check_rejects_implausible_jump():
     upd = tr.update(scene(40, 40))
     assert upd.ok is False
     assert "jump" in upd.reason
+
+
+def test_jump_budget_scales_with_frame_size_and_elapsed_time():
+    """A fixed fraction of the diagonal is too loose on a small FPV feed: 35% of
+    a 360x240 diagonal is 151 px, ~42% of the frame width, wide enough to hop
+    onto a different object and keep calling it the same track."""
+    small = cv2.resize(scene(80, 120), (360, 240))
+    tr = ObjectTracker(label="widget")
+    assert tr.start(small, BoundingBox(u_min=60, v_min=100, u_max=100, v_max=140))
+
+    class Hop:
+        """Centre moves 100 px, which the old fixed 151 px budget allowed."""
+        def update(self, _frame):
+            return True, (160.0, 100.0, 40.0, 40.0)
+
+    tr._tracker = Hop()
+    upd = tr.update(small)
+    assert upd.ok is False
+    assert "jump" in upd.reason
+
+
+def test_negative_appearance_score_does_not_crash_the_loop():
+    """TM_CCOEFF_NORMED is defined on [-1, 1] and goes negative when the crop
+    anti-correlates with the template, which is precisely the suspect frame this
+    score flags. DetectedObject.confidence is bounded ge=0, so the raw score
+    used to raise a ValidationError out of process_frame and kill perception.
+    Seen live in PySimverse at score -0.21."""
+    tr = ObjectTracker(label="widget")
+    tr.start(scene(120, 120), box_at(120, 120))
+    tr._template_score = lambda _frame, _bbox: -0.21
+
+    upd = tr.update(scene(120, 120))
+
+    assert upd.ok is True
+    assert upd.status is TrackStatus.TEMPORARY_ANOMALY
+    assert 0.0 <= upd.confidence <= 1.0
+    # Must survive the pydantic bound that the raw score violated.
+    DetectedObject(label="widget", bbox=upd.bbox, confidence=upd.confidence)
+
+
+def test_temporary_anomaly_does_not_become_actionable():
+    """A frame we flagged as suspect must not be grounded or written to state:
+    only TRACKING may generate target-directed motion."""
+    from backend.vision.object_tracker import TrackStatus, TrackUpdate
+
+    vlm = FakeVLM(cx=120, cy=120)
+    sm = StateManager()
+    fp = FastPerception(vlm=vlm, state_manager=sm)
+    fp.set_targets(["widget"])
+    fp.process_frame(scene(120, 120), z_altitude=1.0)
+    assert sm.is_actionable("widget") is True
+
+    confirmed_x = sm.get_object("widget").world_x
+
+    # Suspect frame, and the box has moved a long way from the confirmed pose.
+    tracker = fp.trackers.get("widget")
+    tracker.update = lambda _frame: TrackUpdate(
+        ok=True, bbox=box_at(220, 120), confidence=0.2,
+        reason="temporary anomaly", status=TrackStatus.TEMPORARY_ANOMALY,
+    )
+    res = fp.process_frame(scene(120, 120), z_altitude=1.0)
+
+    assert res.objects, "the box should still be reported for the UI"
+    obj = res.objects[0]
+    assert obj.actionable is False
+    assert obj.world_x is None and obj.world_y is None
+    # A single noisy frame is not a confirmed loss, so the last good pose stays.
+    # But it must not be displaced by a frame we declined to trust.
+    assert sm.get_object("widget").world_x == confirmed_x
 
 
 def test_vlm_called_once_then_tracker_takes_over():

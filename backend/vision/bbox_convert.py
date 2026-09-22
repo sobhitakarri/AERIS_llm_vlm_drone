@@ -78,6 +78,29 @@ def to_pixels(
     return u_min, v_min, u_max, v_max
 
 
+def select_qwen_box(
+    vals: Sequence[float], img_w: int, img_h: int
+) -> Optional[Box]:
+    """Qwen2-VL GGUF (Ollama) was trained on 0–1000 boxes.
+
+    `infer` only switches to 0–1000 when a coordinate overflows the image.
+    On a tall still (e.g. 800×1200) a 0–1000 box such as [336, 101, 661, 941]
+    fits as pixels and lands on the wrong half of the object. Prefer the
+    0–1000 reading unless it is implausible and the pixel reading is not.
+    """
+    as_px = to_pixels(vals, img_w, img_h, order="xyxy", assume="infer")
+    as_n1 = to_pixels(vals, img_w, img_h, order="xyxy", assume="norm1000")
+    if as_n1 is None:
+        return as_px
+    if as_px is None or as_px == as_n1:
+        return as_n1
+    p_n = plausibility(*as_n1, img_w, img_h)
+    p_p = plausibility(*as_px, img_w, img_h)
+    if p_n <= 0.0 and p_p > 0.0:
+        return as_px
+    return as_n1
+
+
 def plausibility(
     u_min: int, v_min: int, u_max: int, v_max: int, img_w: int, img_h: int
 ) -> float:
