@@ -67,8 +67,18 @@ def test_does_not_invent_bbox_from_prose():
     assert P._parse_bbox("There is no bottle here.") is None
 
 
-def test_absolute_pixels_pass_through():
-    assert P._to_pixels((100, 50, 200, 150), 640, 480) == (100, 50, 200, 150)
+def test_qwen_prefers_norm1000_when_both_conventions_fit():
+    """Tall 800x1200 still: [336,101,661,941] fits as pixels (wrong half of a
+    centred bottle) and as 0–1000 (centred). Qwen must pick 0–1000."""
+    box = P._to_pixels((336, 101, 661, 941), 800, 1200)
+    assert box is not None
+    u_min, v_min, u_max, v_max = box
+    assert u_min < 280 and u_max > 500
+    assert v_min < 200 and v_max > 1000
+
+
+def test_absolute_pixels_pass_through_via_infer():
+    assert to_pixels((100, 50, 200, 150), 640, 480, assume="infer") == (100, 50, 200, 150)
 
 
 def test_zero_to_one_normalised_is_scaled():
@@ -84,7 +94,7 @@ def test_zero_to_thousand_normalised_is_detected_by_overflow():
 
 
 def test_inverted_corners_are_swapped():
-    assert P._to_pixels((200, 150, 100, 50), 640, 480) == (100, 50, 200, 150)
+    assert to_pixels((200, 150, 100, 50), 640, 480, assume="infer") == (100, 50, 200, 150)
 
 
 def test_degenerate_and_out_of_range_rejected():

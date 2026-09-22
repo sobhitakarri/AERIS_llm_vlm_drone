@@ -6,7 +6,7 @@ from typing import Any, List, Optional
 import numpy as np
 
 from backend.schemas.perception import BoundingBox, DetectedObject, PerceptionResult
-from backend.vision.object_tracker import TargetLock, TrackerManager
+from backend.vision.object_tracker import TargetLock, TrackerManager, TrackStatus
 from backend.vision.spatial_grounding import SpatialGrounding
 from backend.runtime.state_manager import StateManager
 from backend.core.logger import get_logger
@@ -81,11 +81,23 @@ class FastPerception:
             if tracker.alive and not tracker.stale(self.trackers.redetect_interval_s):
                 upd = tracker.update(frame)
                 if upd.ok and upd.bbox:
-                    self.trackers.declare_tracking(label)
-                    out.append(self._ground(
-                        DetectedObject(label=label, bbox=upd.bbox, confidence=upd.confidence),
-                        w, h, z_altitude,
-                    ))
+                    if upd.status is TrackStatus.TRACKING:
+                        self.trackers.declare_tracking(label)
+                        out.append(self._ground(
+                            DetectedObject(
+                                label=label, bbox=upd.bbox, confidence=upd.confidence,
+                            ),
+                            w, h, z_altitude,
+                        ))
+                    else:
+                        # TEMPORARY_ANOMALY: the box is reported for the UI but is
+                        # not grounded and not written to StateManager, so a frame
+                        # we already flagged as suspect cannot generate motion.
+                        # Only TRACKING may drive a target-directed command.
+                        out.append(DetectedObject(
+                            label=label, bbox=upd.bbox,
+                            confidence=upd.confidence, actionable=False,
+                        ))
                     continue
                 # Confirmed CSRT failure: last world pose is immediately stale.
                 # SEEKING until the VLM answers; TARGET_LOST if it also fails.
