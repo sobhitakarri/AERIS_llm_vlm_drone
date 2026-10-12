@@ -1,6 +1,6 @@
 # AERIS digital twin: results and metrics
 
-Generated 2026-10-12 16:12 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
+Generated 2026-10-12 17:26 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
 
 ## 1. Unit tests
 
@@ -61,7 +61,9 @@ land: True  z=0.031  battery=4.01 V (93%)
 PASS
 ```
 
-Video: [videos/case00_link_smoke_flight.mp4](videos/case00_link_smoke_flight.mp4)
+[![Link check flight](previews/case00_link_smoke_flight.gif)](videos/case00_link_smoke_flight.mp4)
+
+Preview above; full video: [videos/case00_link_smoke_flight.mp4](videos/case00_link_smoke_flight.mp4)
 
 ![Link check flight](images/case00_link_smoke_flight.jpg)
 
@@ -96,7 +98,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
 
 > Target 'cardboard box' grounded by depth camera at (-1.60, 1.10) m, top 0.38 m. Plan: hover at 0.72 m above it.
 
-Video: [videos/case01_find_the_cardboard_box_and_hover.mp4](videos/case01_find_the_cardboard_box_and_hover.mp4)
+[![Case 1](previews/case01_find_the_cardboard_box_and_hover.gif)](videos/case01_find_the_cardboard_box_and_hover.mp4)
+
+Preview above; full video: [videos/case01_find_the_cardboard_box_and_hover.mp4](videos/case01_find_the_cardboard_box_and_hover.mp4)
 
 ![Case 1 still](images/case01_find_the_cardboard_box_and_hover.jpg)
 
@@ -108,7 +112,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
 
 > Target 'red bottle' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: hover at 1.29 m above it.
 
-Video: [videos/case02_find_the_red_bottle_and_hover.mp4](videos/case02_find_the_red_bottle_and_hover.mp4)
+[![Case 2](previews/case02_find_the_red_bottle_and_hover.gif)](videos/case02_find_the_red_bottle_and_hover.mp4)
+
+Preview above; full video: [videos/case02_find_the_red_bottle_and_hover.mp4](videos/case02_find_the_red_bottle_and_hover.mp4)
 
 ![Case 2 still](images/case02_find_the_red_bottle_and_hover.jpg)
 
@@ -120,7 +126,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
 
 > Target 'blue cube' grounded by depth camera at (1.75, 1.30) m, top 0.93 m, standing on a 0.74 m surface. Plan: view from 0.50 m, heading 37 deg.
 
-Video: [videos/case03_inspect_the_blue_cube_from_0.mp4](videos/case03_inspect_the_blue_cube_from_0.mp4)
+[![Case 3](previews/case03_inspect_the_blue_cube_from_0.gif)](videos/case03_inspect_the_blue_cube_from_0.mp4)
+
+Preview above; full video: [videos/case03_inspect_the_blue_cube_from_0.mp4](videos/case03_inspect_the_blue_cube_from_0.mp4)
 
 ![Case 3 still](images/case03_inspect_the_blue_cube_from_0.jpg)
 
@@ -132,7 +140,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
 
 > Target 'steel drum' grounded by depth camera at (1.45, -0.85) m, top 0.59 m. Plan: hover at 0.94 m above it.
 
-Video: [videos/case04_find_the_steel_drum_and_hover.mp4](videos/case04_find_the_steel_drum_and_hover.mp4)
+[![Case 4](previews/case04_find_the_steel_drum_and_hover.gif)](videos/case04_find_the_steel_drum_and_hover.mp4)
+
+Preview above; full video: [videos/case04_find_the_steel_drum_and_hover.mp4](videos/case04_find_the_steel_drum_and_hover.mp4)
 
 ![Case 4 still](images/case04_find_the_steel_drum_and_hover.jpg)
 
@@ -144,7 +154,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
 
 > Target 'yellow crate' grounded by depth camera at (-0.57, 0.35) m, top 0.23 m. Plan: hover at 0.60 m above it.
 
-Video: [videos/case05_go_to_the_yellow_crate.mp4](videos/case05_go_to_the_yellow_crate.mp4)
+[![Case 5](previews/case05_go_to_the_yellow_crate.gif)](videos/case05_go_to_the_yellow_crate.mp4)
+
+Preview above; full video: [videos/case05_go_to_the_yellow_crate.mp4](videos/case05_go_to_the_yellow_crate.mp4)
 
 ![Case 5 still](images/case05_go_to_the_yellow_crate.jpg)
 
@@ -156,7 +168,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
 
 > Target 'traffic cone' grounded by depth camera at (0.19, -0.89) m, top 0.46 m, standing on a 0.22 m surface. Plan: view from 0.50 m, heading 14 deg.
 
-Video: [videos/case06_find_the_traffic_cone_and_hover.mp4](videos/case06_find_the_traffic_cone_and_hover.mp4)
+[![Case 6](previews/case06_find_the_traffic_cone_and_hover.gif)](videos/case06_find_the_traffic_cone_and_hover.mp4)
+
+Preview above; full video: [videos/case06_find_the_traffic_cone_and_hover.mp4](videos/case06_find_the_traffic_cone_and_hover.mp4)
 
 ![Case 6 still](images/case06_find_the_traffic_cone_and_hover.jpg)
 
@@ -168,7 +182,9 @@ Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO >
 
 > [CODE] intent=shape | NeLV parser→route→path→control
 
-Video: [videos/case07_take_off_to_0_8_m.mp4](videos/case07_take_off_to_0_8_m.mp4)
+[![Case 7](previews/case07_take_off_to_0_8_m.gif)](videos/case07_take_off_to_0_8_m.mp4)
+
+Preview above; full video: [videos/case07_take_off_to_0_8_m.mp4](videos/case07_take_off_to_0_8_m.mp4)
 
 ![Case 7 still](images/case07_take_off_to_0_8_m.jpg)
 
@@ -180,7 +196,9 @@ Result: **PASS** (refused). Plan: none.
 
 > Target 'purple elephant': not found in the camera view, or nothing physical is at the detected location. No plan generated.
 
-Video: [videos/case08_find_the_purple_elephant_and_hover.mp4](videos/case08_find_the_purple_elephant_and_hover.mp4)
+[![Case 8](previews/case08_find_the_purple_elephant_and_hover.gif)](videos/case08_find_the_purple_elephant_and_hover.mp4)
+
+Preview above; full video: [videos/case08_find_the_purple_elephant_and_hover.mp4](videos/case08_find_the_purple_elephant_and_hover.mp4)
 
 ![Case 8 still](images/case08_find_the_purple_elephant_and_hover.jpg)
 
@@ -194,7 +212,9 @@ Video: [videos/case08_find_the_purple_elephant_and_hover.mp4](videos/case08_find
 
 Log: [logs/05_replan_test.log](logs/05_replan_test.log)
 
-Video: [videos/case09_replan_moved_target.mp4](videos/case09_replan_moved_target.mp4)
+[![Replan test](previews/case09_replan_moved_target.gif)](videos/case09_replan_moved_target.mp4)
+
+Preview above; full video: [videos/case09_replan_moved_target.mp4](videos/case09_replan_moved_target.mp4)
 
 ![Replan test](images/case09_replan_moved_target.jpg)
 

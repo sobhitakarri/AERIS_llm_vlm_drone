@@ -93,9 +93,12 @@ Each language mission was flown and scored once, with
 outage refused them on the first pass. The results report lists every
 attempt, including a weaker model that failed half the cases.
 
-| Case 2: hover above the red bottle | Case 9: target moved mid-hover |
+| Case 2: "Find the red bottle and hover above it for 4 seconds" | Case 9: target moved mid-hover, vehicle replans |
 |---|---|
-| ![Case 2](reports/twin_results/images/case02_find_the_red_bottle_and_hover.jpg) | ![Case 9](reports/twin_results/images/case09_replan_moved_target.jpg) |
+| [![Case 2](reports/twin_results/previews/case02_find_the_red_bottle_and_hover.gif)](reports/twin_results/videos/case02_find_the_red_bottle_and_hover.mp4) | [![Case 9](reports/twin_results/previews/case09_replan_moved_target.gif)](reports/twin_results/videos/case09_replan_moved_target.mp4) |
+
+The previews are time-lapses; click one for the full video. All ten are in
+the [results report](reports/twin_results/README.md).
 
 ## Reproducing the results
 

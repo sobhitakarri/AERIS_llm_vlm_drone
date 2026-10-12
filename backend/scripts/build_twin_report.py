@@ -16,6 +16,7 @@ import csv
 import json
 import re
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -32,6 +33,24 @@ VAL = REPO_ROOT / "cache" / "twin_validation"
 VALIDATION_RUNS = [("litewing_truth", "LiteWing, controller on ground truth"),
                    ("litewing_onboard", "LiteWing, onboard estimator"),
                    ("x500_onboard", "X500, onboard estimator")]
+
+
+def video_md(rel: str, label: str) -> list:
+    """Markdown for a test video. GitHub does not play an .mp4 from the
+    repository inline, so the README shows an animated GIF preview that links
+    to the full video. Without ffmpeg it is a plain link."""
+    src = OUT / rel
+    if not src.is_file():
+        return []
+    gif = OUT / "previews" / (src.stem + ".gif")
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg and (not gif.is_file() or gif.stat().st_mtime < src.stat().st_mtime):
+        gif.parent.mkdir(parents=True, exist_ok=True)
+        vf = "fps=5,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=bayer:bayer_scale=4"
+        subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", str(src), "-vf", vf, str(gif)])
+    if gif.is_file():
+        return [f"[![{label}](previews/{gif.name})]({rel})", "", f"Preview above; full video: [{rel}]({rel})", ""]
+    return [f"Video: [{rel}]({rel})", ""]
 
 
 def load(path: Path):
@@ -185,8 +204,7 @@ def main() -> int:
         summary["link_check"] = smoke.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-1]
     else:
         md += ["Not run.", ""]
-    if (OUT / "videos" / "case00_link_smoke_flight.mp4").is_file():
-        md += ["Video: [videos/case00_link_smoke_flight.mp4](videos/case00_link_smoke_flight.mp4)", ""]
+    md += video_md("videos/case00_link_smoke_flight.mp4", "Link check flight")
     if (OUT / "images" / "case00_link_smoke_flight.jpg").is_file():
         md += ["![Link check flight](images/case00_link_smoke_flight.jpg)", ""]
     cams = [c for c in ("overhead", "fpv", "chase") if (OUT / "images" / f"camera_{c}.jpg").is_file()]
@@ -240,8 +258,8 @@ def main() -> int:
                 md += [f"> {str(r['reasoning']).strip()}", ""]
             if r.get("error"):
                 md += [f"Error reported: {r['error']}", ""]
-            if r.get("video") and (OUT / r["video"]).is_file():
-                md += [f"Video: [{r['video']}]({r['video']})", ""]
+            if r.get("video"):
+                md += video_md(r["video"], f"Case {r['id']}")
             imgs = []
             if r.get("still") and (OUT / r["still"]).is_file():
                 imgs.append(f"![Case {r['id']} still]({r['still']})")
@@ -262,8 +280,7 @@ def main() -> int:
                f"| {replan['target']} | {fmt(replan['moved_cm'])} | {replan['replans']} | {fmt(replan['final_error_cm'])} | "
                f"{fmt(replan['passed'])} |", "",
                "Log: [logs/05_replan_test.log](logs/05_replan_test.log)", ""]
-        if (OUT / replan["video"]).is_file():
-            md += [f"Video: [{replan['video']}]({replan['video']})", ""]
+        md += video_md(replan["video"], "Replan test")
         if (OUT / replan["still"]).is_file():
             md += [f"![Replan test]({replan['still']})", ""]
     else:
