@@ -1,8 +1,10 @@
 """
 Fast Perception Stack (OpenCV + Object Bounding Box Tracking).
 """
+import threading
 import time
-from typing import Any, List, Optional
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Any, Dict, List, Optional
 import numpy as np
 
 from backend.schemas.perception import BoundingBox, DetectedObject, PerceptionResult
@@ -31,7 +33,23 @@ class FastPerception:
         vlm: Optional[Any] = None,
         state_manager: Optional[StateManager] = None,
         trackers: Optional[TrackerManager] = None,
+        async_detect: bool = False,
+        clearance_m: float = 0.35,
+        z_max: float = 1.5,
     ):
+        # async_detect: VLM calls run on a single worker thread and the loop
+        # picks the answer up on a later frame. Inline calls stall tracking
+        # for seconds per target, and with several targets every track goes
+        # stale before the loop comes round again.
+        self.async_detect = async_detect
+        self.clearance_m = clearance_m
+        self.z_max = z_max
+        self._worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vlm-detect") if async_detect else None
+        self._pending: Dict[str, Future] = {}
+        # label -> (x, y, top_z) of objects being followed in the depth map.
+        self._geo: Dict[str, tuple] = {}
+        self._lock = threading.RLock()
+        self.rejected_ungrounded = 0
         self.grounding = grounding or SpatialGrounding()
         self.vlm = vlm
         self.state_manager = state_manager
@@ -45,20 +63,68 @@ class FastPerception:
         new = [l for l in (labels or []) if l]
         if new == self.active_targets:
             return
-        for gone in set(self.active_targets) - set(new):
-            self.trackers.drop(gone)
-        self.active_targets = new
+        # Under the lock: a frame being processed must not write a dropped
+        # target back into the state store after it has been removed.
+        with self._lock:
+            for gone in set(self.active_targets) - set(new):
+                self.trackers.drop(gone)
+                self._pending.pop(gone, None)
+                self._geo.pop(gone, None)
+                if self.state_manager:
+                    self.state_manager.remove_object(gone)
+            self.active_targets = new
         logger.info("Perception targets set to %s", new or "[]")
 
-    def _ground(self, det: DetectedObject, img_w: int, img_h: int, z_altitude: float) -> DetectedObject:
-        u, v = det.bbox.center_pixel
-        wx, wy, wz = self.grounding.pixel_to_world(
-            u, v, z_altitude=z_altitude, img_w=img_w, img_h=img_h
-        )
-        det.world_x, det.world_y, det.world_z = wx, wy, wz
+    def _ground(self, det: DetectedObject, img_w: int, img_h: int, z_altitude: float) -> Optional[DetectedObject]:
+        """Fill in world coordinates. Returns None when a depth camera shows
+        there is no physical object under the box."""
+        if getattr(self.grounding, "calibrated", False):
+            x, y, top_z, match = self.grounding.ground_bbox(det.bbox, img_w, img_h)
+            if x is None:
+                self.rejected_ungrounded += 1
+                return None
+            det.world_x, det.world_y = round(x, 3), round(y, 3)
+            det.top_z = round(float(top_z), 3)
+            # Fly-to altitude: clear of the object, inside the envelope.
+            det.world_z = round(min(self.z_max, max(z_altitude, top_z + self.clearance_m)), 3)
+            if match is not None:
+                det.bbox = match.bbox
+                det.support_z = round(match.support_z, 3)
+                det.size_m = [round(match.size_m[0], 3), round(match.size_m[1], 3)]
+                det.grounding = "depth"
+            else:
+                det.grounding = "floor"
+        else:
+            u, v = det.bbox.center_pixel
+            wx, wy, wz = self.grounding.pixel_to_world(
+                u, v, z_altitude=z_altitude, img_w=img_w, img_h=img_h
+            )
+            det.world_x, det.world_y, det.world_z = wx, wy, wz
+            det.grounding = "nominal"
         if self.state_manager:
             self.state_manager.update_object(det)
         return det
+
+    def _detect(self, frame: np.ndarray, label: str, w: int, h: int):
+        """Returns (ready, detection). In async mode the first call submits
+        the job and later calls collect it; `ready` is False while it runs."""
+        if not self.async_detect:
+            return True, self._vlm_detect(frame, label, w, h)
+        fut = self._pending.get(label)
+        if fut is None:
+            if any(not f.done() for f in self._pending.values()):
+                return False, None                 # one detection in flight at a time
+            self.trackers.note_detection_attempt(label)
+            self._pending[label] = self._worker.submit(self._vlm_detect, frame.copy(), label, w, h)
+            return False, None
+        if not fut.done():
+            return False, None
+        self._pending.pop(label, None)
+        try:
+            return True, fut.result()
+        except Exception as exc:
+            logger.warning("VLM detection failed for '%s': %s", label, exc)
+            return True, None
 
     def _track_and_detect(
         self,
@@ -75,20 +141,38 @@ class FastPerception:
         out: List[DetectedObject] = []
         lost: List[str] = []
 
+        depth_mode = bool(getattr(self.grounding, "has_depth", False))
         for label in targets:
             tracker = self.trackers.get(label)
 
-            if tracker.alive and not tracker.stale(self.trackers.redetect_interval_s):
+            if depth_mode and label in self._geo:
+                # With a calibrated depth camera the object is followed as a
+                # physical thing in the height map, not as a patch of pixels:
+                # it cannot drift onto background texture.
+                followed = self._follow_in_depth(label, z_altitude)
+                if followed is not None:
+                    self.trackers.declare_tracking(label)
+                    out.append(followed)
+                    continue
+                self._geo.pop(label, None)
+                self.trackers.drop(label)
+                self.trackers.declare_seeking(label)
+                if self.state_manager:
+                    self.state_manager.mark_lost(label)
+                tracker = self.trackers.get(label)
+
+            elif tracker.alive and not tracker.stale(self.trackers.redetect_interval_s):
                 upd = tracker.update(frame)
                 if upd.ok and upd.bbox:
+                    grounded = None
                     if upd.status is TrackStatus.TRACKING:
-                        self.trackers.declare_tracking(label)
-                        out.append(self._ground(
-                            DetectedObject(
-                                label=label, bbox=upd.bbox, confidence=upd.confidence,
-                            ),
+                        grounded = self._ground(
+                            DetectedObject(label=label, bbox=upd.bbox, confidence=upd.confidence),
                             w, h, z_altitude,
-                        ))
+                        )
+                    if grounded is not None:
+                        self.trackers.declare_tracking(label)
+                        out.append(grounded)
                     else:
                         # TEMPORARY_ANOMALY: the box is reported for the UI but is
                         # not grounded and not written to StateManager, so a frame
@@ -105,24 +189,115 @@ class FastPerception:
                 if self.state_manager:
                     self.state_manager.mark_lost(label)
 
-            if not self._can_detect() or not self.trackers.needs_detection(label):
+            waiting = label in self._pending
+            if not self._can_detect() or not (waiting or self.trackers.needs_detection(label)):
                 if self.trackers.lock_state(label) in (TargetLock.SEEKING, TargetLock.TARGET_LOST):
                     if label not in lost:
                         lost.append(label)
                 continue
 
-            self.trackers.note_detection_attempt(label)
-            det = self._vlm_detect(frame, label, w, h)
-            if det is None:
+            if not self.async_detect:
+                self.trackers.note_detection_attempt(label)
+            ready, det = self._detect(frame, label, w, h)
+            if not ready:
+                if self.trackers.lock_state(label) in (TargetLock.SEEKING, TargetLock.TARGET_LOST):
+                    if label not in lost:
+                        lost.append(label)
+                continue
+            # A box with nothing physical under it counts as a miss, which is
+            # what lets TARGET_LOST fire against a model that never refuses.
+            grounded = self._ground(det, w, h, z_altitude) if det is not None else None
+            if grounded is None:
                 self.trackers.note_detection_missed(label)
                 if self.state_manager:
                     self.state_manager.mark_lost(label)
                 lost.append(label)
                 continue
-            if self.trackers.seed(label, frame, det.bbox):
-                out.append(self._ground(det, w, h, z_altitude))
+            if depth_mode:
+                self._geo[label] = (grounded.world_x, grounded.world_y, grounded.top_z or 0.0)
+                self.trackers.declare_tracking(label)
+                out.append(grounded)
+            elif self.trackers.seed(label, frame, det.bbox):
+                out.append(grounded)
 
         return out, lost
+
+    def _follow_in_depth(self, label: str, z_altitude: float) -> Optional[DetectedObject]:
+        from backend.vision.scene_proposals import nearest_proposal
+        x, y, top = self._geo[label]
+        match = nearest_proposal(x, y, top, self.grounding.refresh_scene())
+        if match is None:
+            return None
+        self._geo[label] = (match.x, match.y, match.top_z)
+        det = DetectedObject(
+            label=label, bbox=match.bbox, confidence=0.9,
+            world_x=round(match.x, 3), world_y=round(match.y, 3), top_z=round(match.top_z, 3),
+            world_z=round(min(self.z_max, max(z_altitude, match.top_z + self.clearance_m)), 3),
+            support_z=round(match.support_z, 3), size_m=[round(match.size_m[0], 3), round(match.size_m[1], 3)],
+            grounding="depth",
+        )
+        if self.state_manager:
+            self.state_manager.update_object(det)
+        return det
+
+    def locate(self, frame: Optional[np.ndarray], label: str, z_altitude: float = 0.6) -> Optional[DetectedObject]:
+        """One-shot detect + ground for planning. Blocks for one VLM call.
+
+        On success the tracker for `label` is seeded, so the background loop
+        keeps following the object without asking the model again."""
+        if frame is None or not label or not self._can_detect():
+            return None
+        h, w = frame.shape[:2]
+        det = self._vlm_detect(frame, label, w, h)
+        if det is None:
+            return None
+        with self._lock:
+            grounded = self._ground(det, w, h, z_altitude)
+            if grounded is None:
+                self.trackers.note_detection_missed(label)
+                return None
+            self._pending.pop(label, None)
+            if getattr(self.grounding, "has_depth", False):
+                self._geo[label] = (grounded.world_x, grounded.world_y, grounded.top_z or 0.0)
+                self.trackers.declare_tracking(label)
+            else:
+                self.trackers.seed(label, frame, det.bbox)
+        self._save_snapshot(frame, det, grounded)
+        return grounded
+
+    def _save_snapshot(self, frame: np.ndarray, det: DetectedObject, grounded: DetectedObject) -> None:
+        """Audit image for each planning-time detection: the model's box and
+        where it was grounded."""
+        try:
+            import cv2
+            from pathlib import Path
+            out_dir = Path(__file__).resolve().parents[2] / "cache" / "identified"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            img = frame.copy()
+            b = det.bbox
+            cv2.rectangle(img, (b.u_min, b.v_min), (b.u_max, b.v_max), (0, 200, 255), 2)
+            tag = f"{grounded.label}: ({grounded.world_x:+.2f}, {grounded.world_y:+.2f}) m [{grounded.grounding}]"
+            cv2.putText(img, tag, (b.u_min, max(14, b.v_min - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 255), 1, cv2.LINE_AA)
+            name = "".join(c if c.isalnum() else "_" for c in grounded.label)[:40]
+            cv2.imwrite(str(out_dir / f"{name}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"), img)
+        except Exception as exc:
+            logger.debug("Snapshot not saved: %s", exc)
+
+    def adopt(self, det: DetectedObject) -> None:
+        """Make an already-located object the loop's only target, keeping its
+        track so no new detection is requested."""
+        with self._lock:
+            keep_geo = self._geo.get(det.label)
+            if self.state_manager:
+                for old in self.active_targets:
+                    if old != det.label:
+                        self.state_manager.remove_object(old)
+            self.active_targets = [det.label]
+            self._geo = {det.label: keep_geo} if keep_geo else {}
+            self._pending.clear()
+            if self.state_manager:
+                self.state_manager.update_object(det)
+        logger.info("Perception targets set to %s", self.active_targets)
 
     def _can_detect(self) -> bool:
         return bool(self.vlm) and hasattr(self.vlm, "resolve_target")
@@ -165,7 +340,8 @@ class FastPerception:
 
         # 1. Track what we already found; ask the VLM only for what we have lost.
         if frame is not None and wanted and self._can_detect():
-            live, lost = self._track_and_detect(frame, wanted, z_altitude)
+            with self._lock:
+                live, lost = self._track_and_detect(frame, wanted, z_altitude)
             objects.extend(live)
 
         # 2. No VLM configured: fall back to the colour heuristic.
@@ -180,21 +356,7 @@ class FastPerception:
                 if obj.label not in lost
             ]
 
-        for obj in objects:
-            if obj.bbox and obj.actionable and (obj.world_x is None or obj.world_y is None):
-                u_center, v_center = obj.bbox.center_pixel
-                world_x, world_y, world_z = self.grounding.pixel_to_world(u_center, v_center, z_altitude=z_altitude)
-                obj.world_x = world_x
-                obj.world_y = world_y
-                obj.world_z = world_z
-
-        return PerceptionResult(
-            timestamp=time.time(),
-            objects=objects,
-            lost_labels=lost,
-            drone_pixel=(320, 240),
-            drone_world=(0.0, 0.0),
-        )
+        return PerceptionResult(timestamp=time.time(), objects=objects, lost_labels=lost)
 
     def _color_track(
         self,

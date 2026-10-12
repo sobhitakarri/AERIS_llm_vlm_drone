@@ -60,6 +60,10 @@ class StateManager:
                 if obj.actionable and obj.world_x is not None
             ]
 
+    def remove_object(self, label: str) -> None:
+        with self._lock:
+            self.perceived_objects.pop(label, None)
+
     def clear_objects(self) -> None:
         with self._lock:
             self.perceived_objects.clear()

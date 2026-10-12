@@ -1,0 +1,11 @@
+{
+  "prompt": "Find the red bottle and hover above it for 25 seconds",
+  "target": "red_bottle",
+  "moved_cm": 36.1,
+  "moves": 1,
+  "replans": 1,
+  "final_error_cm": 5.0,
+  "passed": true,
+  "video": "videos/case09_replan_moved_target.mp4",
+  "still": "images/case09_replan_moved_target.jpg"
+}

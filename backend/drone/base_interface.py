@@ -59,6 +59,10 @@ class DroneInterface(ABC):
         """Get current 6-DOF telemetry state."""
         pass
 
+    def home_position(self) -> tuple:
+        """(x, y) of the take-off / landing point."""
+        return (0.0, 0.0)
+
     def get_frame(self) -> Optional[np.ndarray]:
         """Capture a camera frame. Returns None if no camera is available."""
         return None

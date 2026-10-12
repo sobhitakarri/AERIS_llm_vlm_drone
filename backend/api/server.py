@@ -2,16 +2,16 @@
 FastAPI Server Setup & Lifecycle Factory.
 """
 import os
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.api.routes import router, app_context
 from backend.planning.planner import MissionPlanner
+from backend.planning.safety_validator import SafetyValidator
 from backend.runtime.mission_executor import MissionExecutor
 from backend.runtime.uav_monitor import UavMonitor
 from backend.drone.sim_interface import SimInterface
-from backend.drone.litewing_interface import LiteWingInterface
-from backend.drone.matlab_interface import MatlabInterface
 from backend.models.gemini_provider import GeminiProvider
 from backend.models.qwen_provider import QwenProvider
 from backend.models.qwen25_llm_provider import Qwen25LLMProvider
@@ -22,17 +22,60 @@ from backend.vision.spatial_grounding import SpatialGrounding
 from backend.vision.fast_cv import FastPerception
 from backend.vision.perception_loop import PerceptionLoop
 from backend.runtime.replan_manager import ReplanManager
+from backend.schemas.capabilities import RobotCapabilities, WorkspaceBounds
 from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.core.config import settings
 from backend.core.logger import get_logger
 
 logger = get_logger("Server")
 
+TWIN_MODES = ("twin", "digital_twin", "simulink")
 
-def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
+
+def make_drone(mode: str, uri: str = None, launch_twin: bool = False):
+    """Drone backend for a mode name. Returns (drone, canonical_mode)."""
+    mode = (mode or "sim").lower().strip()
+    if mode in TWIN_MODES:
+        from backend.drone.twin_interface import TwinInterface
+        return TwinInterface(launch=launch_twin), "twin"
+    if mode in ("real", "litewing", "esp32"):
+        from backend.drone.litewing_interface import LiteWingInterface
+        return (LiteWingInterface(uri=uri) if uri else LiteWingInterface()), "litewing"
+    return SimInterface(), "sim"
+
+
+def capabilities_for(drone) -> RobotCapabilities:
+    """Flight envelope from the backend when it publishes one."""
+    ws = drone.workspace() if hasattr(drone, "workspace") else None
+    if not ws:
+        return RobotCapabilities()
+    airframe = (getattr(drone, "runtime", {}) or {}).get("airframe", {})
+    v_max = (airframe.get("v_max") or [0.8])[0]
+    return RobotCapabilities(
+        robot_name=airframe.get("name", "Digital twin"),
+        workspace=WorkspaceBounds(
+            x_min=ws["x"][0], x_max=ws["x"][1], y_min=ws["y"][0], y_max=ws["y"][1],
+            z_min=ws["z"][0], z_max=ws["z"][1], max_velocity=float(v_max),
+        ),
+    )
+
+
+def make_models(model_mode: str):
+    """(llm, vlm, canonical_mode) for a model backend name."""
+    if (model_mode or "").lower() in ("qwen", "qwen25", "local", "local_split", "hybrid"):
+        vlm = QwenProvider()          # Qwen2-VL-2B: visual grounding / bounding boxes
+        llm = Qwen25LLMProvider()     # Qwen2.5-3B:  LLM planning, high-level reasoning
+        if not llm.is_live:
+            logger.warning("[Server] Qwen2.5-3B not available. Falling back to Qwen2-VL-2B for planning.")
+            llm = vlm
+        return llm, vlm, "local_split"
+    llm = GeminiProvider()
+    return llm, llm, "gemini"
+
+
+def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool = False) -> FastAPI:
     app = FastAPI(title=settings.app_name, version=settings.version)
 
-    # Enable CORS for frontend connection
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -55,54 +98,40 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
     drone_mode = drone_mode or settings.drone_backend
     model_mode = model_mode or settings.llm_provider
 
-    # Initialize Drone Interface (sim | real | matlab | pysimverse)
-    if drone_mode.lower() == "real":
-        drone = LiteWingInterface()
-    elif drone_mode.lower() == "matlab":
-        drone = MatlabInterface()
-    elif drone_mode.lower() in ("pysimverse", "simverse"):
-        from backend.drone.pysimverse_interface import PySimverseInterface
-        drone = PySimverseInterface()
-    else:
-        drone = SimInterface()
-
+    drone, drone_mode = make_drone(drone_mode, launch_twin=launch_twin)
     drone.connect()
+    is_twin = drone_mode == "twin"
+    capabilities = capabilities_for(drone)
 
-    # Initialize Vision, State & Event Subsystems
-    camera_manager = CameraManager()
-    camera_manager.start()
+    # A backend with its own scene cameras must not also grab the laptop webcam.
+    camera_manager = CameraManager(autostart=not is_twin)
+    if not is_twin:
+        camera_manager.start()
+
     grounding = SpatialGrounding()
-    from pathlib import Path
-    _h_path = Path(__file__).resolve().parents[2] / "cache" / "homography.json"
-    if _h_path.is_file():
-        try:
-            grounding.load(_h_path)
-            logger.info("Loaded calibrated homography from %s", _h_path)
-        except Exception as exc:
-            logger.warning("Homography load failed (%s); using default H.", exc)
+    if not is_twin:
+        _h_path = Path(__file__).resolve().parents[2] / "cache" / "homography.json"
+        if _h_path.is_file():
+            try:
+                grounding.load(_h_path)
+                logger.info("Loaded homography from %s", _h_path)
+            except Exception as exc:
+                logger.warning("Homography load failed (%s); using default H.", exc)
     state_manager = StateManager()
 
-    # Initialize LLM/VLM Providers
-    # Split architecture: Qwen2-VL-2B = VLM (bounding boxes only)
-    #                     Qwen2.5-3B  = LLM (text planning, reasoning)
-    from backend.planning.vla_pipeline import UAVVLAPipeline
-    if model_mode.lower() in ("qwen", "qwen25", "local"):
-        vlm = QwenProvider()          # Qwen2-VL-2B: visual grounding / bounding boxes
-        llm = Qwen25LLMProvider()     # Qwen2.5-3B:  LLM planning, high-level reasoning
-        if not llm.is_live:
-            # Qwen2.5-3B not yet pulled; fall back to VLM model for planning too
-            logger.warning("[Server] Qwen2.5-3B not available. Falling back to Qwen2-VL-2B for planning.")
-            llm = vlm
-        else:
-            logger.info("[Server] Split mode: VLM=Qwen2-VL-2B | LLM=Qwen2.5-3B")
-        vla = UAVVLAPipeline(vlm_provider=vlm, llm_provider=llm)
-    else:
-        llm = GeminiProvider()
-        vlm = llm
-        vla = UAVVLAPipeline(vlm_provider=llm, llm_provider=llm)
+    llm, vlm, model_mode = make_models(model_mode)
 
-    planner = MissionPlanner()
+    planner = MissionPlanner(validator=SafetyValidator(capabilities))
     monitor = UavMonitor()
+
+    # VLM calls run on a worker thread; the loop only tracks and grounds.
+    fast_cv = FastPerception(
+        grounding=grounding, vlm=vlm, state_manager=state_manager,
+        async_detect=True, z_max=capabilities.workspace.z_max,
+    )
+    from backend.planning.vla_pipeline import UAVVLAPipeline
+    vla = UAVVLAPipeline(vlm_provider=vlm, llm_provider=llm, perception=fast_cv, grounding=grounding)
+
     executor = MissionExecutor(
         drone=drone,
         monitor=monitor,
@@ -111,11 +140,10 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
         state_manager=state_manager,
         camera_manager=camera_manager,
         event_bus=event_bus,
+        perception=fast_cv,
+        capabilities=capabilities,
     )
 
-    # The loop needs the VLM so it can re-detect when a track is lost; CSRT
-    # cannot re-acquire on its own. Calls are rate limited inside TrackerManager.
-    fast_cv = FastPerception(grounding=grounding, vlm=vlm, state_manager=state_manager)
     perception_loop = PerceptionLoop(
         perception=fast_cv,
         camera_manager=camera_manager,
@@ -124,15 +152,21 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
     )
     perception_loop.start()
 
+    scene_service = None
+    if is_twin:
+        from backend.vision.scene_service import SceneService
+        scene_service = SceneService(drone, grounding)
+        scene_service.start()
+
     def _mission_active() -> bool:
         return monitor.status == "running" and not monitor.aborted()
 
     def _on_replan(label: str, info: dict) -> None:
         # Never resurrect a drone that is on the ground: a replan arriving as the
         # plan's final LAND runs would otherwise fly it again after landing.
-        grounded = app_context.get("drone") or drone
-        gs = grounded.get_state()
-        if gs.z <= 0.1 or not gs.is_armed:
+        active_drone = app_context.get("drone") or drone
+        st = active_drone.get_state()
+        if st.z <= 0.1 or not st.is_armed:
             logger.info("[Replan] Ignoring drift for '%s': drone is not airborne.", label)
             return
         sm = app_context.get("state_manager") or state_manager
@@ -140,17 +174,12 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
             logger.info("[Replan] Ignoring drift for '%s': target is not actionable.", label)
             return
         planner.trigger_replan(f"{label} drifted {info.get('drift', 0):.2f}m")
-        ws = (app_context.get("capabilities") or None)
-        xmin, xmax, ymin, ymax = -1.45, 1.45, -1.45, 1.45
-        if ws and getattr(ws, "workspace", None):
-            xmin, xmax = ws.workspace.x_min + 0.05, ws.workspace.x_max - 0.05
-            ymin, ymax = ws.workspace.y_min + 0.05, ws.workspace.y_max - 0.05
-        nx = max(xmin, min(float(info["new_x"]), xmax))
-        ny = max(ymin, min(float(info["new_y"]), ymax))
-        # Read the live backend: the user may have switched drones since startup.
-        active_drone = app_context.get("drone") or drone
-        st = active_drone.get_state()
-        z = max(st.z, 0.5)
+        ws = (app_context.get("capabilities") or capabilities).workspace
+        nx = max(ws.x_min, min(float(info["new_x"]), ws.x_max))
+        ny = max(ws.y_min, min(float(info["new_y"]), ws.y_max))
+        obj = sm.get_object(label) if sm else None
+        z = obj.world_z if obj and obj.world_z is not None else st.z
+        z = max(ws.z_min, min(ws.z_max, max(z, st.z)))
         skills = [
             SkillPrimitive(skill="MOVE_TO", params={"x": round(nx, 3), "y": round(ny, 3), "z": round(z, 3), "speed": 0.4}),
             SkillPrimitive(skill="HOVER", params={"t": 2.0}),
@@ -181,6 +210,7 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
         fast_cv.set_targets([])
         fast_cv.trackers.reset()
         state_manager.clear_objects()
+        app_context["last_mission"] = _data if isinstance(_data, dict) else {}
 
     def _on_target_lost(data) -> None:
         label = (data or {}).get("label", "")
@@ -192,29 +222,30 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
     event_bus.subscribe(EVENT_MISSION_FINISHED, _on_mission_finished)
     event_bus.subscribe(EVENT_TARGET_LOST, _on_target_lost)
 
-    # Inject global application context
-    app_context["drone"] = drone
-    app_context["llm"] = llm
-    app_context["vlm"] = vlm
-    app_context["vla"] = vla
-    app_context["planner"] = planner
-    app_context["executor"] = executor
-    app_context["monitor"] = monitor
-    app_context["state_manager"] = state_manager
-    app_context["camera_manager"] = camera_manager
-    app_context["grounding"] = grounding
-    app_context["event_bus"] = event_bus
-    app_context["replan"] = replan
-    app_context["perception_loop"] = perception_loop
-    app_context["perception"] = fast_cv
-    app_context["model_mode"] = model_mode or "gemini"
-    app_context["stream_source"] = "webcam"
-    app_context["drone_backend"] = drone_mode or "sim"
-    app_context["drone_uri"] = settings.drone_uri
-    app_context["refresh_viewer"] = False
-    if not app_context.get("capabilities"):
-        from backend.schemas.capabilities import RobotCapabilities
-        app_context["capabilities"] = RobotCapabilities()
+    app_context.update({
+        "drone": drone,
+        "llm": llm,
+        "vlm": vlm,
+        "vla": vla,
+        "planner": planner,
+        "executor": executor,
+        "monitor": monitor,
+        "state_manager": state_manager,
+        "camera_manager": camera_manager,
+        "grounding": grounding,
+        "event_bus": event_bus,
+        "replan": replan,
+        "perception_loop": perception_loop,
+        "perception": fast_cv,
+        "scene_service": scene_service,
+        "model_mode": model_mode,
+        "stream_source": "twin" if is_twin else "webcam",
+        "camera_view": "overhead" if is_twin else "pip",
+        "drone_backend": drone_mode,
+        "drone_uri": settings.drone_uri,
+        "capabilities": capabilities,
+        "last_mission": {},
+    })
 
     app.include_router(router)
 
@@ -223,80 +254,6 @@ def create_app(drone_mode: str = None, model_mode: str = None) -> FastAPI:
     if os.path.exists(frontend_dir):
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
         logger.info(f"Mounted frontend dashboard static files from {frontend_dir}")
-
-    def start_dashboard_viewer():
-        import threading
-        import cv2
-        import time
-
-        def viewer_loop():
-            # Wait for backend to fully start
-            time.sleep(2.0)
-            active_source = app_context.get("stream_source", "webcam")
-            active_window = f"AERIS Tracking [{active_source.upper()}]"
-            cv2.namedWindow(active_window, cv2.WINDOW_NORMAL)
-
-            while True:
-                time.sleep(0.033)  # ~30fps
-
-                # Detect dynamic stream change or explicit refresh request
-                current_source = app_context.get("stream_source", "webcam")
-                if current_source != active_source or app_context.get("refresh_viewer", False):
-                    app_context["refresh_viewer"] = False
-                    try:
-                        cv2.destroyWindow(active_window)
-                    except Exception:
-                        pass
-                    active_source = current_source
-                    active_window = f"AERIS Tracking [{active_source.upper()}]"
-                    cv2.namedWindow(active_window, cv2.WINDOW_NORMAL)
-                    logger.info(f"[AERIS Viewer] Refreshed OpenCV window for stream: '{active_source}'")
-
-                frame = None
-                if active_source == "webcam":
-                    cam_ref = app_context.get("camera_manager")
-                    if cam_ref and hasattr(cam_ref, "read_frame"):
-                        frame = cam_ref.read_frame()
-                elif active_source in ("pysimverse", "simverse"):
-                    drone_ref = app_context.get("drone")
-                    if drone_ref and hasattr(drone_ref, "get_frame"):
-                        frame = drone_ref.get_frame()
-                else:  # fallback
-                    drone_ref = app_context.get("drone")
-                    if drone_ref and hasattr(drone_ref, "get_frame"):
-                        frame = drone_ref.get_frame()
-                    if frame is None:
-                        cam_ref = app_context.get("camera_manager")
-                        if cam_ref and hasattr(cam_ref, "read_frame"):
-                            frame = cam_ref.read_frame()
-
-                if frame is not None:
-                    display_frame = frame.copy()
-                    vla_ref = app_context.get("vla")
-                    state_mgr = app_context.get("state_manager")
-
-                    if vla_ref and vla_ref.object_search.last_bbox:
-                        bbox = vla_ref.object_search.last_bbox
-                        label = vla_ref.object_search.last_label or "target"
-                        cv2.rectangle(display_frame, (bbox.u_min, bbox.v_min), (bbox.u_max, bbox.v_max), (0, 240, 255), 2)
-                        cv2.putText(display_frame, f"AERIS: {label}", (bbox.u_min, max(0, bbox.v_min - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 240, 255), 2)
-                    elif state_mgr:
-                        for obj in state_mgr.get_all_objects():
-                            if obj.bbox:
-                                b = obj.bbox
-                                cv2.rectangle(display_frame, (b.u_min, b.v_min), (b.u_max, b.v_max), (0, 215, 255), 2)
-                                cv2.putText(display_frame, f"{obj.label} ({obj.confidence:.2f})", (b.u_min, max(0, b.v_min - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 215, 255), 2)
-
-                    cv2.imshow(active_window, display_frame)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    pass
-        
-        t = threading.Thread(target=viewer_loop, daemon=True)
-        t.start()
-        logger.info("Started local OpenCV tracking viewer thread with dynamic source refresh.")
-
-    start_dashboard_viewer()
 
     logger.info(f"FastAPI initialized with Drone Mode: '{drone_mode}', Model Mode: '{model_mode}'.")
     return app

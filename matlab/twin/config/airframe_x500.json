@@ -1,0 +1,93 @@
+{
+  "name": "Holybro X500 v2 (Pixhawk class)",
+  "notes": "Mass, inertia and propulsion constants follow the PX4 Gazebo x500 airframe model. Use this airframe only in a scene large enough for a 0.5 m class vehicle.",
+  "mass_kg": 2.0,
+  "arm_m": 0.25,
+  "inertia_kgm2": [
+    0.02167,
+    0.02167,
+    0.04
+  ],
+  "hull_m": [
+    0.5,
+    0.5,
+    0.22
+  ],
+  "rotor": {
+    "layout": "X",
+    "spin": [
+      1,
+      -1,
+      1,
+      -1
+    ],
+    "radius_m": 0.165,
+    "kT_N_per_rad2s2": 8.54858e-06,
+    "kQ_Nm_per_rad2s2": 1.3677e-07,
+    "inertia_kgm2": 6e-05,
+    "omega_max_rad_s": 1000,
+    "tau_up_s": 0.0125,
+    "tau_down_s": 0.025
+  },
+  "aero": {
+    "rotor_drag_N_s_per_m_rad": 8.06428e-05,
+    "cd_area_m2": 0.06,
+    "ground_effect": true
+  },
+  "battery": {
+    "cells": 4,
+    "capacity_Ah": 5.0,
+    "r_internal_ohm": 0.02,
+    "ocv_soc": [
+      0.0,
+      0.1,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "ocv_v": [
+      3.3,
+      3.6,
+      3.7,
+      3.78,
+      3.87,
+      4.02,
+      4.2
+    ],
+    "v_nominal": 15.2,
+    "drive_efficiency": 0.7,
+    "avionics_A": 0.6
+  },
+  "sensors": {
+    "imu_rate_hz": 1000,
+    "gyro_noise_density_rad_s_rtHz": 6e-05,
+    "gyro_bias_rad_s": 0.005,
+    "gyro_bias_walk_rad_s2_rtHz": 1e-05,
+    "accel_noise_density_m_s2_rtHz": 0.002,
+    "accel_bias_m_s2": 0.08,
+    "tof_rate_hz": 50,
+    "tof_sigma_m": 0.01,
+    "tof_max_m": 8.0,
+    "flow_rate_hz": 100,
+    "flow_sigma_m_s_per_m": 0.03,
+    "flow_min_height_m": 0.15
+  },
+  "control": {
+    "rate_hz": 500,
+    "rate_bandwidth_rad_s": 22,
+    "attitude_bandwidth_rad_s": 6.5,
+    "velocity_bandwidth_rad_s": 2.2,
+    "position_bandwidth_rad_s": 0.9,
+    "yaw_bandwidth_rad_s": 2.0,
+    "tilt_max_deg": 25,
+    "v_max_xy_m_s": 1.5,
+    "v_max_z_m_s": 1.0,
+    "a_max_m_s2": 2.5,
+    "v_land_m_s": 0.35,
+    "yaw_rate_max_deg_s": 90,
+    "climb_rate_bandwidth_rad_s": 3.0,
+    "altitude_bandwidth_rad_s": 1.2
+  }
+}

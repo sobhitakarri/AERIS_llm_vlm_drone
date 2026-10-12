@@ -8,3 +8,11 @@ __pycache__/
 venv/
 cache/
 LiteWing_repo/
+reports/*
+!reports/twin_results/
+_removed_pre_twin/
+
+# Simulink build artefacts (the twin model is generated from matlab/twin/config)
+slprj/
+*.mexw64
+matlab/twin/models/

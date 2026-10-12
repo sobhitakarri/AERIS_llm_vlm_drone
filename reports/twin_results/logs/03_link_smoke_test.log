@@ -1,0 +1,22 @@
+[15:30:02] [WARNING] [TwinInterface]: [Twin] No telemetry yet. Start the twin in MATLAB with `run_aeris_twin` (matlab/twin), or pass --launch-twin.
+[15:32:11] [INFO] [TwinInterface]: [Twin] Camera stream connected.
+[15:32:17] [INFO] [TwinInterface]: [Twin] Camera stream connected.
+telemetry ok: pose=(-1.80, -1.40, 0.01) battery=4.14 V
+[15:32:23] [INFO] [TwinInterface]: [Twin] Camera stream connected.
+cameras: ['chase', 'fpv', 'overhead']
+depth: (720, 960) range 1.72..2.92 m
+[15:32:24] [INFO] [Calibration]: [Calibration] Overhead camera calibrated from markers [0, 1, 2, 3, 4, 5]: reprojection 0.78 px, floor RMS 0.1 cm, camera at [0.0, -0.0, 2.91]
+calibration: markers [0, 1, 2, 3, 4, 5], reprojection 0.78 px, camera at [0.003, -0.003, 2.915]
+[15:32:24] [INFO] [TwinInterface]: [Twin] TAKEOFF to 1.00 m
+takeoff: True  z=0.97  est-vs-truth 0.1 cm
+[15:32:27] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.80, -0.60, 1.00) at 0.60 m/s
+move_to (-0.8, -0.6, 1.0):  7.4 s  true=(-0.77, -0.58, 0.99)  true error 3.7 cm
+[15:32:35] [INFO] [TwinInterface]: [Twin] MOVE_TO (0.40, -0.20, 1.20) at 0.60 m/s
+move_to (+0.4, -0.2, 1.2):  7.3 s  true=(+0.46, -0.16, 1.19)  true error 7.7 cm
+[15:32:42] [INFO] [TwinInterface]: [Twin] MOVE_TO (0.00, 0.60, 0.80) at 0.60 m/s
+move_to (+0.0, +0.6, 0.8):  6.5 s  true=(+0.05, +0.64, 0.79)  true error 6.6 cm
+[15:32:48] [INFO] [TwinInterface]: [Twin] ROTATE +90 deg
+rotate: yaw=89 deg (true 89)
+[15:32:50] [INFO] [TwinInterface]: [Twin] LAND
+land: True  z=0.031  battery=4.01 V (93%)
+PASS

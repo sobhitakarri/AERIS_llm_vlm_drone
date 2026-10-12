@@ -1,0 +1,13 @@
+
+=== AERIS digital twin ===
+Airframe   LiteWing ESP32-S3 (33 g, thrust/weight 2.23, hover 11182 rpm)
+Scene      Indoor flight lab (14 objects, 6 calibration markers)
+Link       commands udp:5005  telemetry udp:5006  cameras tcp:5007
+[build] aeris_twin (132 blocks) saved to D:\UG\B.TECH\7th\Project_phase1\matlab\twin\models\aeris_twin.slx
+[twin] run 1 started - waiting for commands
+[twin] run 1 ended (StopCommand)
+[twin] run 2 started - waiting for commands
+[twin] run 2 ended (StopCommand)
+[twin] stopped.
+[Warning: Unable to close the model 'aeris_twin' because it has been changed. To save changes, use close_system('aeris_twin',1). To discard
+changes, use close_system('aeris_twin',0).] 

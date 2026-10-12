@@ -50,6 +50,11 @@ def to_pixels(
         x1, y1, x2, y2 = a, b, c, d
 
     peak = max(abs(x1), abs(y1), abs(x2), abs(y2))
+    if assume == "norm1000" and (min(a, b, c, d) < 0.0 or (peak > 1.0 and any(abs(v - round(v)) > 1e-6 for v in (a, b, c, d)))):
+        # The 0-1000 convention is non-negative integers. Fractions next to
+        # hundreds ([7.32, 143, 198, 770]) or a negative edge are a reply in
+        # no convention at all.
+        return None
     if peak <= 1.0:
         scale_x, scale_y = float(img_w), float(img_h)          # 0-1 normalised
     elif assume == "norm1000" and peak <= 1000.0:

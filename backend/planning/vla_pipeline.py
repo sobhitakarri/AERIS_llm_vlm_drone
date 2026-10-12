@@ -1,230 +1,300 @@
 """
-UAV-VLA (Vision-Language-Action) Mission Pipeline.
-Reference architecture: https://github.com/Sautenich/UAV-VLA
-Decomposes mission generation into:
-1. Goal Extractor (LLM intent & target parser)
-2. Object Search VLM (Visual grounding & spatial homography)
-3. Actions Generator (Safe executable flight primitives)
+UAV-VLA (Vision-Language-Action) mission pipeline.
+
+Follows the three stages of https://github.com/Sautenich/UAV-VLA, indoors and
+in metres:
+  1. GoalExtractor     what to do and which object the command refers to
+  2. ObjectSearch      find that object in the scene camera and ground it
+  3. ActionsGenerator  turn goal + grounded position into Skill DSL steps
+
+Nothing here knows where any object is. A target that cannot be seen and
+grounded produces no plan: the mission is refused rather than flown to a
+guessed position.
 """
-from dataclasses import dataclass
-import json
+from dataclasses import dataclass, field
+import math
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
+
 import numpy as np
 
 from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.capabilities import RobotCapabilities
-from backend.vision.spatial_grounding import SpatialGrounding
+from backend.schemas.perception import DetectedObject
 from backend.planning.safety_validator import SafetyValidator
-from backend.planning.control_platform import finalize_skills
+from backend.planning.shape_paths import clip_skills_to_workspace
 from backend.core.logger import get_logger
 
 logger = get_logger("UAV-VLA")
+
+_DEFAULT_ALTITUDE_M = 0.6
+_DEFAULT_STANDOFF_M = 0.5
+_VIEW_CLEARANCE_M = 0.30      # height above whatever is under a viewing position
+
+_ACTION = (
+    r"find|locate|search for|look for|go to|fly to|move to|navigate to|approach|inspect|"
+    r"look at|point at|face|hover (?:above|over|at|near|beside|next to|facing)|"
+    r"circle(?: around)?|orbit(?: around)?|land (?:on|near|next to|beside)"
+)
+_TARGET = re.compile(rf"\b(?:{_ACTION})\s+(?:the\s+|a\s+|an\s+)?(?P<target>.+)$")
+# Where the referring expression ends and the next instruction begins.
+# Relational clauses ("left of the blue cube") stay in: the VLM resolves them.
+_TARGET_END = re.compile(
+    r"\s*(?:,|\band\s+(?:then\s+)?(?:hover|land|inspect|circle|orbit|return|look|fly|go|take|rotate|face|come|stay|wait)\b"
+    r"|\bthen\b|\bfrom\s+\d|\bat\s+\d|\bfor\s+\d|\bwith\s+(?:a\s+)?radius\b|\bwhile\b|\bbefore\b|\bafter\b).*$"
+)
+_CONDITIONAL = re.compile(
+    rf"\b(?:{_ACTION})\s+(?:the\s+)?(?P<primary>.+?)\s+if\s+(?P<cond>.+?),?\s+(?:otherwise|else)\s+"
+    rf"(?:(?:{_ACTION})\s+)?(?:the\s+)?(?P<fallback>.+)$"
+)
 
 
 @dataclass
 class VLAMissionGoal:
     raw_command: str
-    task_type: str  # "SEARCH_HOVER", "INSPECT", "NAVIGATE", "PATROL"
+    task_type: str                      # HOVER_ABOVE | VIEW | CIRCLE | LAND_NEAR
     target_object: Optional[str] = None
-    object_types: List[str] = None
-    target_altitude: float = 1.0
+    fallback_object: Optional[str] = None
+    object_types: List[str] = field(default_factory=list)
+    target_altitude: Optional[float] = None
     hover_duration: float = 3.0
     land_at_end: bool = False
+    facing_target: bool = False
+    standoff_distance: float = 0.0
+    above_center: bool = False
+    radius: float = 0.5
+    condition: Optional[str] = None
 
     def __post_init__(self):
-        if self.object_types is None:
-            self.object_types = [self.target_object] if self.target_object else []
+        if not self.object_types:
+            self.object_types = [t for t in (self.target_object, self.fallback_object) if t]
+
+
+def _clean_phrase(text: str) -> str:
+    text = _TARGET_END.sub("", " " + (text or "")).strip()
+    text = re.sub(r"\s+(?:it|them|there)$", "", text)
+    return text.strip(" .,!?")
 
 
 class GoalExtractor:
-    """Stage 1: Parses natural language input into structured mission goals."""
+    """Stage 1: natural-language command to a structured goal."""
 
     def __init__(self, llm_provider=None):
         self.llm = llm_provider
 
     def extract_goal(self, command: str) -> VLAMissionGoal:
-        cmd = command.lower().strip()
-        logger.info(f"[UAV-VLA: GoalExtractor] Parsing user command: '{command}'")
+        cmd = re.sub(r"\s+", " ", (command or "").lower().strip())
 
-        # Altitude parsing (e.g. "at 1.2m" or "to 0.8 meters")
-        alt = 1.0
-        alt_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m|meter|meters)", cmd)
-        if alt_match:
-            alt = min(2.0, max(0.3, float(alt_match.group(1))))
+        standoff = 0.0
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:m|meters?|metres?)\s*(?:away|back|distance)", cmd)
+        if m:
+            standoff = float(m.group(1))
+        without_standoff = cmd if not m else cmd.replace(m.group(0), " ")
 
-        # Hover duration (e.g. "hover for 5 seconds")
+        altitude = None
+        m = re.search(r"(?:\bat|\bto|altitude|height)\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(?:m|meters?|metres?)\b", without_standoff)
+        if m:
+            altitude = float(m.group(1))
+
         hover_s = 3.0
-        hover_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)", cmd)
-        if hover_match:
-            hover_s = float(hover_match.group(1))
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:s|sec|secs|seconds?)\b", cmd)
+        if m:
+            hover_s = float(m.group(1))
 
-        land_at_end = bool(re.search(r"\b(land|landing|and land)\b", cmd))
+        radius = 0.5
+        m = re.search(r"radius\s*(?:of\s*)?(\d+(?:\.\d+)?)", cmd)
+        if m:
+            radius = float(m.group(1))
 
-        # Target object extraction
-        target = None
-        target_patterns = [
-            r"\b(?:find|inspect|look at|approach|go to|track)\s+(?:the\s+)?([a-z0-9_\-\s]+?)(?:\s+and|\s+near|\s+at|$)",
-            r"\b(?:circle|hover over|hover above)\s+(?:the\s+)?([a-z0-9_\-\s]+?)(?:\s+and|\s+at|$)",
-        ]
-        for pat in target_patterns:
-            m = re.search(pat, cmd)
+        target, fallback, condition = None, None, None
+        m = _CONDITIONAL.search(cmd)
+        if m:
+            primary = _clean_phrase(m.group("primary"))
+            cond = re.sub(r"^(?:it is|it's|its|that is|there is)\s+", "", m.group("cond").strip())
+            target = f"{primary} that is {cond}"
+            fallback = _clean_phrase(m.group("fallback"))
+            condition = cond
+        else:
+            m = _TARGET.search(cmd)
             if m:
-                cand = m.group(1).strip()
-                cand = re.sub(r"\b(it|then|please|now|safely)\b", "", cand).strip()
-                if cand:
-                    target = cand
-                    break
+                target = _clean_phrase(m.group("target")) or None
 
-        if not target and any(w in cmd for w in ["bottle", "cube", "barrel", "box", "chair", "object", "target"]):
-            for word in ["bottle", "cube", "barrel", "box", "chair", "target", "object"]:
-                if word in cmd:
-                    target = word
-                    break
+        circle = bool(re.search(r"\b(?:circle|orbit)\b", cmd))
+        facing = bool(re.search(r"\b(?:facing|face|look at|point at)\b", cmd))
+        inspect = bool(re.search(r"\binspect\b", cmd))
+        above = bool(re.search(r"\b(?:above|over|on top of)\b", cmd))
+        land_at_end = bool(re.search(r"\bland\b", cmd))
 
-        object_types: List[str] = []
-        for word in ("red bottle", "blue cube", "bottle", "cube", "barrel", "box", "chair"):
-            if word in cmd and word not in object_types:
-                object_types.append(word)
-        if target and target not in object_types:
-            object_types.insert(0, target)
-
-        task_type = "NAVIGATE"
-        if target:
-            task_type = "SEARCH_HOVER" if not re.search(r"\bcircle\b", cmd) else "SEARCH_CIRCLE"
+        if circle:
+            task = "CIRCLE"
+        elif standoff > 0 or (inspect and not above) or (facing and not above):
+            task = "VIEW"
+        else:
+            task = "HOVER_ABOVE"
 
         goal = VLAMissionGoal(
-            raw_command=command,
-            task_type=task_type,
-            target_object=target,
-            object_types=object_types,
-            target_altitude=alt,
-            hover_duration=hover_s,
-            land_at_end=land_at_end,
+            raw_command=command, task_type=task, target_object=target, fallback_object=fallback,
+            target_altitude=altitude, hover_duration=hover_s, land_at_end=land_at_end,
+            facing_target=facing or task == "VIEW", standoff_distance=standoff,
+            above_center=above, radius=radius, condition=condition,
         )
         logger.info(
-            f"[UAV-VLA: GoalExtractor] Extracted Goal: type={goal.task_type}, "
-            f"target='{goal.target_object}', types={goal.object_types}, alt={goal.target_altitude}m"
+            f"[UAV-VLA: GoalExtractor] task={goal.task_type} target='{goal.target_object}' "
+            f"fallback='{goal.fallback_object}' standoff={goal.standoff_distance} alt={goal.target_altitude}"
         )
         return goal
 
 
 class ObjectSearchVLM:
-    """Stage 2: Detects target object in outside camera image and grounds it into metric coordinates."""
+    """Stage 2: find the target in the scene camera and ground it in metres."""
 
-    def __init__(self, grounding: Optional[SpatialGrounding] = None, vlm_provider=None):
-        self.grounding = grounding or SpatialGrounding()
+    def __init__(self, vlm_provider=None, perception=None):
         self.vlm = vlm_provider
+        self.perception = perception
         self.last_bbox = None
         self.last_label = None
+        self.last_detection: Optional[DetectedObject] = None
 
-    def search_and_ground(self, frame: Optional[np.ndarray], target_description: str) -> Tuple[float, float, float]:
-        """
-        Locates the target in the frame and converts pixel center to metric (X, Y, Z) coordinates.
-        Falls back to intelligent mock grounding if image or VLM is uninitialized.
-        """
-        logger.info(f"[UAV-VLA: ObjectSearch] Searching for target: '{target_description}'...")
-
-        self.last_label = target_description
-        self.last_bbox = None
-
-        # If frame is available and VLM exists, attempt VLM visual grounding
-        if frame is not None and self.vlm and hasattr(self.vlm, "resolve_target"):
-            try:
-                import cv2
-                _, enc = cv2.imencode(".jpg", frame)
-                det = self.vlm.resolve_target(enc.tobytes(), target_description)
-                if det and det.bbox:
-                    self.last_bbox = det.bbox
-                    u, v = det.bbox.center_pixel
-                    x, y, z = self.grounding.pixel_to_world(u, v)
-                    logger.info(f"[UAV-VLA: ObjectSearch] VLM found target at pixel ({u}, {v}) -> World ({x:.2f}, {y:.2f}, {z:.2f})m")
-                    return x, y, z
-            except Exception as e:
-                logger.warning(f"[UAV-VLA: ObjectSearch] VLM detection fallback triggered: {e}")
-
-        # Default fallback grounded locations for simulator objects (barrel, cube, bottle)
-        preset_coords = {
-            "barrel": (0.6, 0.8, 0.0),
-            "red bottle": (0.5, 0.5, 0.0),
-            "bottle": (0.5, 0.5, 0.0),
-            "blue cube": (-0.4, 0.6, 0.0),
-            "cube": (-0.4, 0.6, 0.0),
-            "box": (-0.5, -0.4, 0.0),
-            "chair": (0.8, -0.6, 0.0),
-        }
-        for k, coords in preset_coords.items():
-            if k in (target_description or "").lower():
-                logger.info(f"[UAV-VLA: ObjectSearch] Grounded '{target_description}' via workspace mapping to {coords}")
-                return coords
-
-        logger.info(f"[UAV-VLA: ObjectSearch] Generic target grounding to (0.5, 0.5, 0.0)")
-        return 0.5, 0.5, 0.0
+    def search_and_ground(self, frame: Optional[np.ndarray], description: str,
+                          z_altitude: float = _DEFAULT_ALTITUDE_M) -> Optional[DetectedObject]:
+        """Returns the grounded detection, or None if the object is not there."""
+        self.last_label, self.last_bbox, self.last_detection = description, None, None
+        if frame is None:
+            logger.warning("[UAV-VLA: ObjectSearch] No camera frame available.")
+            return None
+        if self.perception is None or not hasattr(self.perception, "locate"):
+            logger.warning("[UAV-VLA: ObjectSearch] No perception stack attached.")
+            return None
+        det = self.perception.locate(frame, description, z_altitude=z_altitude)
+        if det is None or det.world_x is None:
+            logger.info(f"[UAV-VLA: ObjectSearch] '{description}' not found in view.")
+            return None
+        self.last_bbox, self.last_detection = det.bbox, det
+        logger.info(
+            f"[UAV-VLA: ObjectSearch] '{description}' at ({det.world_x:.2f}, {det.world_y:.2f}) m, "
+            f"top {det.top_z if det.top_z is not None else float('nan'):.2f} m [{det.grounding}]"
+        )
+        return det
 
 
 class ActionsGenerator:
-    """Stage 3: Generates validated, executable drone flight action sequences."""
+    """Stage 3: goal + grounded target to a validated skill sequence."""
 
-    def __init__(self, validator: Optional[SafetyValidator] = None):
+    def __init__(self, validator: Optional[SafetyValidator] = None, grounding=None):
         self.validator = validator or SafetyValidator()
+        self.grounding = grounding
 
-    def generate_actions(self, goal: VLAMissionGoal, target_coords: Tuple[float, float, float], capabilities: RobotCapabilities) -> MissionPlan:
-        logger.info(f"[UAV-VLA: ActionsGenerator] Generating actions for goal '{goal.task_type}' at coords {target_coords}...")
-        tx, ty, tz = target_coords
-        flight_z = goal.target_altitude
+    def _surface_below(self, x: float, y: float) -> float:
+        if self.grounding is not None and getattr(self.grounding, "has_depth", False):
+            return self.grounding.obstacle_height(x, y, radius=0.2)
+        return 0.0
 
-        skills: List[SkillPrimitive] = [
-            SkillPrimitive(skill="TAKEOFF", params={"z": flight_z, "speed": 0.4}),
-        ]
+    def generate_actions(self, goal: VLAMissionGoal, det: DetectedObject,
+                         capabilities: RobotCapabilities, pose: Optional[dict] = None) -> MissionPlan:
+        ws = capabilities.workspace
+        pose = pose or {}
+        px, py, pz = float(pose.get("x", 0.0)), float(pose.get("y", 0.0)), float(pose.get("z", 0.0))
+        airborne = pz > ws.z_min * 0.6
+        tx, ty = float(det.world_x), float(det.world_y)
+        top = float(det.top_z) if det.top_z is not None else 0.0
+        clamp_z = lambda z: round(max(ws.z_min, min(ws.z_max, z)), 2)  # noqa: E731
+        cruise = clamp_z(goal.target_altitude if goal.target_altitude else _DEFAULT_ALTITUDE_M)
 
-        if goal.task_type == "SEARCH_HOVER":
-            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(tx, 2), "y": round(ty, 2), "z": flight_z, "speed": 0.4}))
+        skills: List[SkillPrimitive] = []
+        if not airborne:
+            skills.append(SkillPrimitive(skill="TAKEOFF", params={"z": cruise, "speed": 0.4}))
+
+        # Unit vector from the target toward where the drone is now: the side
+        # a stand-off or orbit entry point is placed on.
+        ax, ay = px - tx, py - ty
+        norm = math.hypot(ax, ay)
+        ax, ay = (ax / norm, ay / norm) if norm > 1e-3 else (-1.0, 0.0)
+
+        note = ""
+        if goal.task_type == "VIEW":
+            d = goal.standoff_distance or _DEFAULT_STANDOFF_M
+            vx, vy = tx + d * ax, ty + d * ay
+            vx = max(ws.x_min, min(ws.x_max, vx))
+            vy = max(ws.y_min, min(ws.y_max, vy))
+            vz = clamp_z(max(goal.target_altitude or 0.0, top + 0.10, self._surface_below(vx, vy) + _VIEW_CLEARANCE_M))
+            yaw = math.degrees(math.atan2(ty - vy, tx - vx))
+            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(vx, 2), "y": round(vy, 2), "z": vz, "speed": 0.4}))
+            skills.append(SkillPrimitive(skill="ROTATE", params={"yaw": round(yaw, 1)}))
             skills.append(SkillPrimitive(skill="HOVER", params={"t": goal.hover_duration}))
-        elif goal.task_type == "SEARCH_CIRCLE":
-            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(tx, 2), "y": round(ty, 2), "z": flight_z, "speed": 0.4}))
-            skills.append(SkillPrimitive(skill="CIRCLE", params={"radius": 0.4}))
+            note = f"view from {d:.2f} m, heading {yaw:.0f} deg"
+        elif goal.task_type == "CIRCLE":
+            r = max(0.25, min(1.2, goal.radius))
+            cz = clamp_z(max(cruise, top + _VIEW_CLEARANCE_M))
+            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(tx + r * ax, 2), "y": round(ty + r * ay, 2), "z": cz, "speed": 0.4}))
+            skills.append(SkillPrimitive(skill="CIRCLE", params={"target": goal.target_object, "x": round(tx, 2), "y": round(ty, 2), "radius": r}))
             skills.append(SkillPrimitive(skill="HOVER", params={"t": 2.0}))
+            note = f"orbit radius {r:.2f} m"
         else:
-            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(tx, 2), "y": round(ty, 2), "z": flight_z, "speed": 0.4}))
-            skills.append(SkillPrimitive(skill="HOVER", params={"t": 2.0}))
+            hz = clamp_z(max(cruise, float(det.world_z) if det.world_z is not None else cruise))
+            skills.append(SkillPrimitive(skill="MOVE_TO", params={"x": round(tx, 2), "y": round(ty, 2), "z": hz, "speed": 0.4}))
+            if goal.facing_target:
+                skills.append(SkillPrimitive(skill="ROTATE", params={"yaw": round(math.degrees(math.atan2(-ay, -ax)), 1)}))
+            skills.append(SkillPrimitive(skill="HOVER", params={"t": goal.hover_duration}))
+            note = f"hover at {hz:.2f} m above it"
 
         if goal.land_at_end:
             skills.append(SkillPrimitive(skill="LAND", params={}))
+        skills = clip_skills_to_workspace(skills, ws)
 
-        if capabilities:
-            skills, spec, nelv = finalize_skills(skills, capabilities.workspace, None, None)
-        else:
-            spec, nelv = None, []
+        how = {"depth": "depth camera", "floor": "floor projection", "nominal": "uncalibrated camera"}.get(det.grounding or "", "camera")
+        reasoning = (
+            f"Target '{det.label}' grounded by {how} at ({tx:.2f}, {ty:.2f}) m"
+            + (f", top {top:.2f} m" if det.top_z is not None else "")
+            + (f", standing on a {det.support_z:.2f} m surface" if det.support_z else "")
+            + f". Plan: {note}."
+        )
+        if goal.condition:
+            reasoning += f" Condition checked: '{goal.condition}'."
 
         plan = MissionPlan(
-            raw_command=goal.raw_command,
-            reasoning=f"UAV-VLA generated {len(skills)} actions for target '{goal.target_object}' at ({tx:.2f}, {ty:.2f}, {flight_z:.2f})m.",
-            skills=skills,
-            source="uav-vla",
-            spec=spec,
-            pipeline=["uav-vla-goal-extractor", "uav-vla-object-search", "uav-vla-actions-generator"] + nelv,
+            raw_command=goal.raw_command, reasoning=reasoning, skills=skills, source="uav-vla",
+            pipeline=["uav-vla-goal-extractor", "uav-vla-object-search", "uav-vla-actions-generator"],
         )
-
-        if capabilities:
-            self.validator.capabilities = capabilities
+        self.validator.capabilities = capabilities
         validation = self.validator.validate_plan(plan)
-        if validation.is_valid:
-            return validation.validated_plan or plan
-        logger.warning(f"[UAV-VLA: ActionsGenerator] Plan validation reported warnings: {validation.errors}")
+        if not validation.is_valid:
+            logger.warning(f"[UAV-VLA: ActionsGenerator] Plan failed validation: {validation.errors}")
         return plan
 
 
 class UAVVLAPipeline:
-    """Unified UAV-VLA System combining all 3 stages."""
+    """Goal extraction, object search and action generation in sequence."""
 
-    def __init__(self, vlm_provider=None, llm_provider=None):
+    def __init__(self, vlm_provider=None, llm_provider=None, perception=None, grounding=None):
         self.goal_extractor = GoalExtractor(llm_provider)
-        self.object_search = ObjectSearchVLM(vlm_provider=vlm_provider)
-        self.actions_generator = ActionsGenerator()
+        self.object_search = ObjectSearchVLM(vlm_provider=vlm_provider, perception=perception)
+        self.actions_generator = ActionsGenerator(grounding=grounding)
 
-    def process(self, raw_command: str, camera_frame: Optional[np.ndarray], capabilities: RobotCapabilities) -> MissionPlan:
-        goal = self.goal_extractor.extract_goal(raw_command)
-        target_coords = (0.0, 0.0, 0.0)
-        if goal.target_object:
-            target_coords = self.object_search.search_and_ground(camera_frame, goal.target_object)
-        return self.actions_generator.generate_actions(goal, target_coords, capabilities)
+    def attach(self, perception=None, grounding=None) -> None:
+        if perception is not None:
+            self.object_search.perception = perception
+        if grounding is not None:
+            self.actions_generator.grounding = grounding
+
+    def process(self, raw_command: str, camera_frame: Optional[np.ndarray],
+                capabilities: RobotCapabilities, pose: Optional[dict] = None,
+                goal: Optional[VLAMissionGoal] = None) -> MissionPlan:
+        goal = goal or self.goal_extractor.extract_goal(raw_command)
+        stages = ["uav-vla-goal-extractor", "uav-vla-object-search"]
+        if not goal.target_object:
+            return MissionPlan(raw_command=raw_command, source="uav-vla", pipeline=stages[:1], skills=[],
+                               reasoning="Could not work out which object the command refers to.")
+
+        z = goal.target_altitude or _DEFAULT_ALTITUDE_M
+        det = self.object_search.search_and_ground(camera_frame, goal.target_object, z)
+        tried = [goal.target_object]
+        if det is None and goal.fallback_object:
+            tried.append(goal.fallback_object)
+            det = self.object_search.search_and_ground(camera_frame, goal.fallback_object, z)
+        if det is None:
+            why = "no camera frame" if camera_frame is None else "not found in the camera view, or nothing physical is at the detected location"
+            return MissionPlan(
+                raw_command=raw_command, source="uav-vla", pipeline=stages, skills=[],
+                reasoning=f"Target {' / '.join(repr(t) for t in tried)}: {why}. No plan generated.",
+            )
+        return self.actions_generator.generate_actions(goal, det, capabilities, pose)

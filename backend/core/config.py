@@ -49,7 +49,7 @@ class Settings(BaseModel):
     )
     drone_backend: str = Field(
         default_factory=lambda: os.getenv("DRONE_BACKEND", "sim").strip().lower(),
-        description="Options: sim, real, matlab, pysimverse",
+        description="Options: twin, sim, real",
     )
 
     # API Keys

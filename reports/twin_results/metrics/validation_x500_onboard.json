@@ -1,0 +1,25 @@
+{
+  "airframe": "Holybro X500 v2 (Pixhawk class)",
+  "estimator": "onboard",
+  "realtime_factor": 1.1110825580529922,
+  "hover_throttle": 0.71053098298361839,
+  "hover_rotor_rpm": 7224.2219413414359,
+  "takeoff_settle_s": 1.5110000000000001,
+  "takeoff_overshoot_cm": 7.162140378567039,
+  "tracking_rmse_cm": 6.5983134051427808,
+  "tracking_max_cm": 16.872408047831417,
+  "waypoint_error_cm": [
+    1.3548363380184907,
+    1.3050286460407465,
+    2.6102935484354246,
+    2.3363474316782811
+  ],
+  "max_tilt_deg": 16.936119074318761,
+  "yaw_step_final_deg": 89.657902483980891,
+  "estimator_rmse_cm": 1.5322908127144343,
+  "estimator_final_xy_cm": 1.5303405824560568,
+  "landed": true,
+  "landing_xy_error_cm": 1.8064457030410004,
+  "battery_used_pct": 4.34220132886014,
+  "min_voltage": 15.958298472372897
+}

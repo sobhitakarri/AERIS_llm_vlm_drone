@@ -1,0 +1,25 @@
+{
+  "airframe": "LiteWing ESP32-S3",
+  "estimator": "onboard",
+  "realtime_factor": 2.295889267117817,
+  "hover_throttle": 0.63734297497045178,
+  "hover_rotor_rpm": 11178.452051675375,
+  "takeoff_settle_s": 1.35,
+  "takeoff_overshoot_cm": 0,
+  "tracking_rmse_cm": 4.8131490239534234,
+  "tracking_max_cm": 13.097025794114778,
+  "waypoint_error_cm": [
+    2.7059436418883998,
+    2.9382080021340995,
+    2.3568574398166162,
+    2.4826234361501425
+  ],
+  "max_tilt_deg": 18.841858419339925,
+  "yaw_step_final_deg": 90.128756856990847,
+  "estimator_rmse_cm": 1.8733209893230907,
+  "estimator_final_xy_cm": 1.798828831480749,
+  "landed": true,
+  "landing_xy_error_cm": 2.2836131791695986,
+  "battery_used_pct": 3.1568706827326376,
+  "min_voltage": 3.8980912397704226
+}

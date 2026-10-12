@@ -1,0 +1,217 @@
+[15:54:01] [INFO] [Main]: Starting Framework Backend [Model: GEMINI, Target: TWIN]...
+[15:54:01] [INFO] [Main]: GEMINI_API_KEY loaded from .env (53 chars).
+[15:54:01] [INFO] [TwinInterface]: [Twin] Camera stream connected.
+[15:54:01] [INFO] [TwinInterface]: [Twin] Connected to a running digital twin.
+[15:54:05] [INFO] [GeminiProvider]: Gemini LIVE client ready (Interactions API, model=gemini-robotics-er-2-preview).
+[15:54:05] [INFO] [PerceptionLoop]: Perception loop started (~10 Hz).
+[15:54:05] [INFO] [ReplanManager]: ReplanManager started — monitoring for significant target drift.
+[15:54:05] [INFO] [Server]: Mounted frontend dashboard static files from D:\UG\B.TECH\7th\Project_phase1\frontend
+[15:54:05] [INFO] [Server]: FastAPI initialized with Drone Mode: 'twin', Model Mode: 'gemini'.
+[15:54:05] [INFO] [Calibration]: [Calibration] Overhead camera calibrated from markers [0, 1, 2, 3, 4, 5]: reprojection 0.78 px, floor RMS 0.1 cm, camera at [0.0, -0.0, 2.91]
+INFO:     Started server process [34672]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:9563 - "GET /api/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9568 - "GET /api/config HTTP/1.1" 200 OK
+[15:54:19] [INFO] [APIRoutes]: Received API command request: 'Find the cardboard box and hover above it'
+[15:54:19] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[15:54:19] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=HOVER_ABOVE target='cardboard box' fallback='None' standoff=0.0 alt=None
+[15:54:19] [INFO] [GeminiProvider]: VLM target resolution query: 'cardboard box'
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+[15:54:49] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-robotics-er-2-preview' failed: The read operation timed out
+[15:54:50] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.8-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:54:50] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.7-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:54:51] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.6-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:54:51] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.5-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:54:51] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-flash-latest' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exce
+[15:55:22] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3-flash-preview' failed: The read operation timed out
+[15:55:52] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.1-flash-lite' failed: The read operation timed out
+[15:55:52] [WARNING] [GeminiProvider]: All Gemini models failed for VLM resolve_target.
+[15:55:52] [WARNING] [GeminiProvider]: Gemini VLM unavailable — reporting target as not found.
+[15:55:52] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'cardboard box' not found in view.
+INFO:     127.0.0.1:9571 - "POST /api/command HTTP/1.1" 200 OK
+[15:56:02] [INFO] [APIRoutes]: Received API command request: 'Find the red bottle and hover above it for 4 seconds'
+[15:56:02] [INFO] [MissionPlanner]: FSM State Transition: ERROR -> PLANNING
+[15:56:02] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=HOVER_ABOVE target='red bottle' fallback='None' standoff=0.0 alt=None
+[15:56:02] [INFO] [GeminiProvider]: VLM target resolution query: 'red bottle'
+[15:56:04] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-robotics-er-2-preview' failed: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[15:56:04] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.8-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:56:05] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.7-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:56:05] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.6-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:56:06] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.5-flash' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceede
+[15:56:06] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-flash-latest' failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exce
+[15:56:08] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3-flash-preview' failed: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[15:56:28] [WARNING] [GeminiProvider]: Gemini VLM model 'gemini-3.1-flash-lite' failed: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+[15:56:28] [WARNING] [GeminiProvider]: All Gemini models failed for VLM resolve_target.
+[15:56:28] [WARNING] [GeminiProvider]: Gemini VLM unavailable — reporting target as not found.
+[15:56:28] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'red bottle' not found in view.
+INFO:     127.0.0.1:12000 - "POST /api/command HTTP/1.1" 200 OK
+[15:56:34] [INFO] [APIRoutes]: Received API command request: 'Inspect the blue cube from 0.5 m away'
+[15:56:34] [INFO] [MissionPlanner]: FSM State Transition: ERROR -> PLANNING
+[15:56:34] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=VIEW target='blue cube' fallback='None' standoff=0.5 alt=None
+[15:56:34] [INFO] [GeminiProvider]: VLM target resolution query: 'blue cube'
+[15:56:39] [INFO] [GeminiProvider]: Gemini VLM response (gemini-robotics-er-2-preview): {"label": "blue cube", "box_2d": [104, 817, 192, 893], "confidence": 0.95}
+[15:56:40] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'blue cube' at (1.75, 1.30) m, top 0.93 m [depth]
+[15:56:41] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Inspect the blue cube from 0.5 m away'
+[15:56:41] [INFO] [FastPerception]: Perception targets set to ['blue cube']
+[15:56:41] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Inspect the blue cube from 0.5 m away'
+[15:56:41] [INFO] [MissionPlanner]: FSM State Transition: -> EXECUTING
+INFO:     127.0.0.1:5511 - "POST /api/command HTTP/1.1" 200 OK
+[15:56:41] [INFO] [MissionExecutor]: Executing mission plan with 4 steps...
+[15:56:41] [INFO] [MissionExecutor]: Executing step 1/4: TAKEOFF with params={'z': 0.6, 'speed': 0.4}
+[15:56:41] [INFO] [TwinInterface]: [Twin] TAKEOFF to 0.60 m
+INFO:     127.0.0.1:5677 - "WebSocket /ws/telemetry" [accepted]
+INFO:     connection open
+[15:56:41] [INFO] [APIRoutes]: WebSocket client connected to /ws/telemetry
+[15:56:45] [INFO] [MissionExecutor]: Executing step 2/4: MOVE_TO with params={'x': 1.35, 'y': 1.0, 'z': 1.04, 'speed': 0.4}
+[15:56:46] [INFO] [MissionExecutor]: Route to (1.35, 1.00, 1.04): over at 1.31 m, 3 leg(s).
+[15:56:46] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.79, -1.42, 1.31) at 0.40 m/s
+[15:56:53] [INFO] [TwinInterface]: [Twin] MOVE_TO (1.35, 1.00, 1.31) at 0.40 m/s
+[15:57:12] [INFO] [SceneService]: [Scene] Heading error 2.0 deg measured over a 3.91 m leg; correcting.
+[15:57:13] [INFO] [TwinInterface]: [Twin] MOVE_TO (1.35, 1.00, 1.04) at 0.40 m/s
+[15:57:15] [INFO] [MissionExecutor]: Executing step 3/4: ROTATE with params={'yaw': 37.3}
+[15:57:15] [INFO] [TwinInterface]: [Twin] ROTATE +23 deg
+[15:57:16] [INFO] [MissionExecutor]: Executing step 4/4: HOVER with params={'t': 3.0}
+[15:57:21] [INFO] [MissionExecutor]: Mission plan execution completed successfully.
+[15:57:21] [INFO] [FastPerception]: Perception targets set to []
+[15:57:21] [INFO] [MissionPlanner]: FSM State Transition: EXECUTING -> DONE
+[15:57:22] [INFO] [APIRoutes]: WebSocket client disconnected.
+[15:57:22] [INFO] [MissionExecutor]: Route to (-1.80, -1.40, 1.03): over at 1.31 m, 3 leg(s).
+[15:57:22] [INFO] [TwinInterface]: [Twin] MOVE_TO (1.37, 1.01, 1.31) at 0.40 m/s
+[15:57:24] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 1.31) at 0.40 m/s
+[15:57:45] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 1.03) at 0.40 m/s
+[15:57:48] [INFO] [TwinInterface]: [Twin] LAND
+[15:57:56] [INFO] [MissionPlanner]: FSM Reset -> IDLE
+INFO:     127.0.0.1:6772 - "POST /api/home HTTP/1.1" 200 OK
+[15:57:59] [INFO] [APIRoutes]: Received API command request: 'Find the steel drum and hover above its center'
+[15:57:59] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[15:57:59] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=HOVER_ABOVE target='steel drum' fallback='None' standoff=0.0 alt=None
+[15:57:59] [INFO] [GeminiProvider]: VLM target resolution query: 'steel drum'
+[15:58:03] [INFO] [GeminiProvider]: Gemini VLM response (gemini-robotics-er-2-preview): { "label": "steel drum", "box_2d": [ 623, 679, 755, 800 ], "confidence": 0.95 }
+[15:58:03] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'steel drum' at (1.45, -0.85) m, top 0.59 m [depth]
+[15:58:03] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Find the steel drum and hover above its center'
+[15:58:03] [INFO] [FastPerception]: Perception targets set to ['steel drum']
+[15:58:03] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Find the steel drum and hover above its center'
+[15:58:03] [INFO] [MissionPlanner]: FSM State Transition: -> EXECUTING
+INFO:     127.0.0.1:4037 - "POST /api/command HTTP/1.1" 200 OK
+[15:58:03] [INFO] [MissionExecutor]: Executing mission plan with 3 steps...
+[15:58:03] [INFO] [MissionExecutor]: Executing step 1/3: TAKEOFF with params={'z': 0.6, 'speed': 0.4}
+[15:58:03] [INFO] [TwinInterface]: [Twin] TAKEOFF to 0.60 m
+INFO:     127.0.0.1:4163 - "WebSocket /ws/telemetry" [accepted]
+INFO:     connection open
+[15:58:03] [INFO] [APIRoutes]: WebSocket client connected to /ws/telemetry
+[15:58:06] [INFO] [MissionExecutor]: Executing step 2/3: MOVE_TO with params={'x': 1.45, 'y': -0.85, 'z': 0.94, 'speed': 0.4}
+[15:58:06] [INFO] [MissionExecutor]: Route to (1.45, -0.85, 0.94): around at 0.94 m, 3 leg(s).
+[15:58:06] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.79, -1.41, 0.94) at 0.40 m/s
+[15:58:09] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.59, -0.89, 0.94) at 0.40 m/s
+[15:58:15] [INFO] [TwinInterface]: [Twin] MOVE_TO (1.45, -0.85, 0.94) at 0.40 m/s
+[15:58:25] [INFO] [MissionExecutor]: Executing step 3/3: HOVER with params={'t': 3.0}
+[15:58:30] [INFO] [MissionExecutor]: Mission plan execution completed successfully.
+[15:58:30] [INFO] [FastPerception]: Perception targets set to []
+[15:58:30] [INFO] [MissionPlanner]: FSM State Transition: EXECUTING -> DONE
+[15:58:31] [INFO] [APIRoutes]: WebSocket client disconnected.
+[15:58:31] [INFO] [MissionExecutor]: Route to (-1.80, -1.40, 0.93): around at 0.93 m, 2 leg(s).
+[15:58:31] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.79, -0.89, 0.93) at 0.40 m/s
+[15:58:41] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 0.93) at 0.40 m/s
+[15:58:47] [INFO] [TwinInterface]: [Twin] LAND
+[15:58:54] [INFO] [MissionPlanner]: FSM Reset -> IDLE
+INFO:     127.0.0.1:5013 - "POST /api/home HTTP/1.1" 200 OK
+[15:58:58] [INFO] [APIRoutes]: Received API command request: 'Go to the yellow crate'
+[15:58:58] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[15:58:58] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=HOVER_ABOVE target='yellow crate' fallback='None' standoff=0.0 alt=None
+[15:58:58] [INFO] [GeminiProvider]: VLM target resolution query: 'yellow crate'
+[15:59:01] [INFO] [GeminiProvider]: Gemini VLM response (gemini-robotics-er-2-preview): { "label": "yellow crate", "box_2d": [375, 373, 479, 457], "confidence": 0.95 }
+[15:59:02] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'yellow crate' at (-0.57, 0.35) m, top 0.23 m [depth]
+[15:59:02] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Go to the yellow crate'
+[15:59:02] [INFO] [FastPerception]: Perception targets set to ['yellow crate']
+[15:59:02] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Go to the yellow crate'
+[15:59:02] [INFO] [MissionPlanner]: FSM State Transition: -> EXECUTING
+INFO:     127.0.0.1:5837 - "POST /api/command HTTP/1.1" 200 OK
+[15:59:02] [INFO] [MissionExecutor]: Executing mission plan with 3 steps...
+[15:59:02] [INFO] [MissionExecutor]: Executing step 1/3: TAKEOFF with params={'z': 0.6, 'speed': 0.4}
+[15:59:02] [INFO] [TwinInterface]: [Twin] TAKEOFF to 0.60 m
+INFO:     127.0.0.1:5943 - "WebSocket /ws/telemetry" [accepted]
+INFO:     connection open
+[15:59:02] [INFO] [APIRoutes]: WebSocket client connected to /ws/telemetry
+[15:59:05] [INFO] [MissionExecutor]: Executing step 2/3: MOVE_TO with params={'x': -0.57, 'y': 0.35, 'z': 0.6, 'speed': 0.4}
+[15:59:06] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.57, 0.35, 0.60) at 0.40 m/s
+[15:59:17] [INFO] [MissionExecutor]: Executing step 3/3: HOVER with params={'t': 3.0}
+[15:59:43] [INFO] [MissionExecutor]: Mission plan execution completed successfully.
+[15:59:43] [INFO] [APIRoutes]: WebSocket client disconnected.
+[15:59:44] [INFO] [FastPerception]: Perception targets set to []
+[15:59:44] [INFO] [MissionPlanner]: FSM State Transition: EXECUTING -> DONE
+[15:59:45] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 0.59) at 0.40 m/s
+[16:00:04] [INFO] [TwinInterface]: [Twin] LAND
+[16:00:12] [INFO] [MissionPlanner]: FSM Reset -> IDLE
+INFO:     127.0.0.1:6646 - "POST /api/home HTTP/1.1" 200 OK
+[16:00:18] [INFO] [APIRoutes]: Received API command request: 'Find the traffic cone and hover facing it'
+[16:00:18] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[16:00:18] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=VIEW target='traffic cone' fallback='None' standoff=0.0 alt=None
+[16:00:18] [INFO] [GeminiProvider]: VLM target resolution query: 'traffic cone'
+[16:00:22] [INFO] [GeminiProvider]: Gemini VLM response (gemini-robotics-er-2-preview): { "label": "traffic cone", "box_2d": [ 645, 508, 709, 549 ], "confidence": 0.95 }
+[16:00:23] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'traffic cone' at (0.19, -0.89) m, top 0.46 m [depth]
+[16:00:24] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Find the traffic cone and hover facing it'
+[16:00:24] [INFO] [FastPerception]: Perception targets set to ['traffic cone']
+[16:00:24] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Find the traffic cone and hover facing it'
+[16:00:24] [INFO] [MissionPlanner]: FSM State Transition: -> EXECUTING
+[16:00:24] [INFO] [MissionExecutor]: Executing mission plan with 4 steps...
+[16:00:24] [INFO] [MissionExecutor]: Executing step 1/4: TAKEOFF with params={'z': 0.6, 'speed': 0.4}
+[16:00:24] [INFO] [TwinInterface]: [Twin] TAKEOFF to 0.60 m
+INFO:     127.0.0.1:7273 - "POST /api/command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7400 - "WebSocket /ws/telemetry" [accepted]
+INFO:     connection open
+[16:00:24] [INFO] [APIRoutes]: WebSocket client connected to /ws/telemetry
+[16:00:30] [INFO] [MissionExecutor]: Executing step 2/4: MOVE_TO with params={'x': -0.29, 'y': -1.01, 'z': 1.49, 'speed': 0.4}
+[16:00:31] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.29, -1.01, 1.49) at 0.40 m/s
+[16:00:44] [INFO] [MissionExecutor]: Executing step 3/4: ROTATE with params={'yaw': 14.3}
+[16:00:44] [INFO] [TwinInterface]: [Twin] ROTATE -23 deg
+[16:00:45] [INFO] [MissionExecutor]: Executing step 4/4: HOVER with params={'t': 3.0}
+[16:00:53] [INFO] [MissionExecutor]: Mission plan execution completed successfully.
+[16:00:54] [INFO] [FastPerception]: Perception targets set to []
+[16:00:54] [INFO] [MissionPlanner]: FSM State Transition: EXECUTING -> DONE
+[16:00:54] [INFO] [APIRoutes]: WebSocket client disconnected.
+[16:00:54] [INFO] [MissionExecutor]: Route to (-1.80, -1.40, 1.48): over at 1.49 m, 1 leg(s).
+[16:00:54] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 1.50) at 0.40 m/s
+[16:01:02] [INFO] [SceneService]: [Scene] Heading error 3.0 deg measured over a 1.51 m leg; correcting.
+[16:01:03] [INFO] [TwinInterface]: [Twin] LAND
+[16:01:14] [INFO] [MissionPlanner]: FSM Reset -> IDLE
+INFO:     127.0.0.1:8004 - "POST /api/home HTTP/1.1" 200 OK
+[16:01:17] [INFO] [APIRoutes]: Received API command request: 'Take off to 0.8 m and fly in a square'
+[16:01:17] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[16:01:17] [INFO] [GeminiProvider]: Generating plan for command: 'Take off to 0.8 m and fly in a square'
+[16:01:17] [INFO] [SafetyValidator]: Plan validation PASSED for command: 'Take off to 0.8 m and fly in a square'
+[16:01:17] [INFO] [MissionPlanner]: FSM State Transition: -> EXECUTING
+[16:01:17] [INFO] [MissionExecutor]: Executing mission plan with 6 steps...
+[16:01:17] [INFO] [MissionExecutor]: Executing step 1/6: TAKEOFF with params={'z': 0.8, 'speed': 0.4}
+[16:01:17] [INFO] [TwinInterface]: [Twin] TAKEOFF to 0.80 m
+INFO:     127.0.0.1:8671 - "POST /api/command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8673 - "WebSocket /ws/telemetry" [accepted]
+INFO:     connection open
+[16:01:17] [INFO] [APIRoutes]: WebSocket client connected to /ws/telemetry
+[16:01:20] [INFO] [MissionExecutor]: Executing step 2/6: MOVE_TO with params={'x': 0.5, 'y': 0.5, 'z': 0.8}
+[16:01:20] [INFO] [TwinInterface]: [Twin] MOVE_TO (0.50, 0.50, 0.80) at 0.40 m/s
+[16:01:33] [INFO] [SceneService]: [Scene] Heading error -1.4 deg measured over a 2.95 m leg; correcting.
+[16:01:34] [INFO] [MissionExecutor]: Executing step 3/6: MOVE_TO with params={'x': 0.5, 'y': -0.5, 'z': 0.8}
+[16:01:34] [INFO] [TwinInterface]: [Twin] MOVE_TO (0.50, -0.50, 0.80) at 0.40 m/s
+[16:01:39] [INFO] [MissionExecutor]: Executing step 4/6: MOVE_TO with params={'x': -0.5, 'y': -0.5, 'z': 0.8}
+[16:01:40] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.50, -0.50, 0.80) at 0.40 m/s
+[16:01:45] [INFO] [MissionExecutor]: Executing step 5/6: MOVE_TO with params={'x': -0.5, 'y': 0.5, 'z': 0.8}
+[16:01:45] [INFO] [TwinInterface]: [Twin] MOVE_TO (-0.50, 0.50, 0.80) at 0.40 m/s
+[16:01:50] [INFO] [MissionExecutor]: Executing step 6/6: MOVE_TO with params={'x': 0.5, 'y': 0.5, 'z': 0.8}
+[16:01:51] [INFO] [TwinInterface]: [Twin] MOVE_TO (0.50, 0.50, 0.80) at 0.40 m/s
+[16:01:56] [INFO] [MissionExecutor]: Mission plan execution completed successfully.
+[16:01:56] [INFO] [MissionPlanner]: FSM State Transition: EXECUTING -> DONE
+[16:01:56] [INFO] [APIRoutes]: WebSocket client disconnected.
+[16:01:56] [INFO] [TwinInterface]: [Twin] MOVE_TO (-1.80, -1.40, 0.79) at 0.40 m/s
+[16:02:10] [INFO] [TwinInterface]: [Twin] LAND
+[16:02:16] [INFO] [MissionPlanner]: FSM Reset -> IDLE
+INFO:     127.0.0.1:9925 - "POST /api/home HTTP/1.1" 200 OK
+[16:02:20] [INFO] [APIRoutes]: Received API command request: 'Find the purple elephant and hover above it'
+[16:02:20] [INFO] [MissionPlanner]: FSM State Transition: IDLE -> PLANNING
+[16:02:20] [INFO] [UAV-VLA]: [UAV-VLA: GoalExtractor] task=HOVER_ABOVE target='purple elephant' fallback='None' standoff=0.0 alt=None
+[16:02:20] [INFO] [GeminiProvider]: VLM target resolution query: 'purple elephant'
+[16:02:24] [INFO] [GeminiProvider]: Gemini VLM response (gemini-robotics-er-2-preview): { "label": "none", "box_2d": null, "confidence": 0.0 }
+[16:02:24] [INFO] [GeminiProvider]: Gemini VLM: target 'purple elephant' not found (conf=0.0)
+[16:02:24] [INFO] [UAV-VLA]: [UAV-VLA: ObjectSearch] 'purple elephant' not found in view.
+INFO:     127.0.0.1:10626 - "POST /api/command HTTP/1.1" 200 OK

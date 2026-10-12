@@ -1,0 +1,17 @@
+metric,"LiteWing, controller on ground truth","LiteWing, onboard estimator","X500, onboard estimator"
+Hover throttle,0.64,0.64,0.71
+Hover rotor speed (rpm),11179,11178,7224
+Take-off settle to 5 cm (s),1.43,1.35,1.51
+Take-off overshoot (cm),0,0,7.2
+Tracking RMSE (cm),1.4,4.8,6.6
+Tracking max error (cm),5.4,13.1,16.9
+Waypoint arrival error (cm),0.3 / 0.3 / 0.1 / 0.2,2.7 / 2.9 / 2.4 / 2.5,1.4 / 1.3 / 2.6 / 2.3
+Max tilt (deg),18.4,18.8,16.9
+Yaw after 90 deg step (deg),90.0,90.1,89.7
+Estimator RMSE (cm),0,1.9,1.5
+Estimator final xy drift (cm),0,1.8,1.5
+Landed,yes,yes,yes
+Landing xy error (cm),0.1,2.3,1.8
+Battery used (%),3.16,3.16,4.34
+Minimum voltage (V),3.93,3.90,15.96
+"Real-time factor, no rendering",0.91,2.30,1.11

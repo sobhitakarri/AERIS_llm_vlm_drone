@@ -18,8 +18,11 @@ logger = get_logger("CameraManager")
 class CameraManager:
     """OpenCV capture with a background thread that keeps the newest frame."""
 
-    def __init__(self, camera_index: int = None):
+    def __init__(self, camera_index: int = None, autostart: bool = True):
         self.camera_index = camera_index if camera_index is not None else settings.camera_index
+        # autostart=False: the device is opened only by an explicit start(),
+        # so a backend with its own cameras does not grab the laptop webcam.
+        self.autostart = autostart
         self.cap = None
         self._lock = threading.Lock()
         self._latest: Optional[np.ndarray] = None
@@ -80,6 +83,8 @@ class CameraManager:
         concurrent reads with the grab thread corrupt the capture backend.
         Pass timeout_s=0 from hot loops that must not block."""
         if not self._running:
+            if not self.autostart:
+                return None
             self.start()
         deadline = time.time() + timeout_s
         while True:

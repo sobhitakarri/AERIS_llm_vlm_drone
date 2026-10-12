@@ -5,6 +5,7 @@ https://ai.google.dev/gemini-api/docs/interactions
 import os
 import re
 import json
+import time
 from typing import Any, Optional
 from backend.models.base_llm import LLMProvider
 from backend.models.base_vlm import VLMProvider
@@ -55,13 +56,26 @@ except ImportError:
     types = None
 
 GEMINI_MODEL_CANDIDATES = [
+    "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
     "gemini-flash-latest",
+    # Separate daily quotas on the free tier; all three box small objects
+    # correctly in the lab scene. gemini-flash-lite-latest did not and is
+    # deliberately not listed.
+    "gemini-robotics-er-2-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite",
 ]
+# A request with no deadline can hang for minutes when a model is overloaded,
+# which blocks the mission; with one, the next candidate is tried instead.
+REQUEST_TIMEOUT_MS = 30000
+# A reply that is not the requested format (broken JSON, a box that is not
+# four numbers) is asked for again this many times. A well-formed "not
+# visible" answer is final and is never retried.
+MALFORMED_RETRIES = 3
+_TRANSIENT = ("503", "504", "UNAVAILABLE", "DEADLINE_EXCEEDED", "timed out")
 
 
 def _extract_json(text: str) -> dict:
@@ -71,7 +85,27 @@ def _extract_json(text: str) -> dict:
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    try:
+        return json.loads(raw, object_pairs_hook=_first_wins)
+    except json.JSONDecodeError as exc:
+        if "Extra data" not in str(exc):
+            raise
+        # A complete value followed by a stray bracket: keep the value.
+        value, _ = json.JSONDecoder(object_pairs_hook=_first_wins).raw_decode(raw)
+        return value
+
+
+def _first_wins(pairs) -> dict:
+    """Smaller models sometimes repeat a key (two "box_2d" for one target).
+    json.loads would silently keep the last; keep the first, which is the
+    model's primary answer, and say so."""
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            logger.warning(f"Gemini repeated the key '{key}' in one object; keeping the first value.")
+            continue
+        out[key] = value
+    return out
 
 
 def _interaction_text(interaction: Any) -> str:
@@ -146,7 +180,7 @@ class GeminiProvider(LLMProvider, VLMProvider):
 
         if GENAI_SDK_AVAILABLE and self.api_key:
             try:
-                self.client = genai.Client(api_key=self.api_key)
+                self.client = genai.Client(api_key=self.api_key, http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS))
                 self.is_live = True
                 api = "Interactions" if hasattr(self.client, "interactions") else "generate_content"
                 logger.info(f"Gemini LIVE client ready ({api} API, model={self.model_name}).")
@@ -360,17 +394,24 @@ class GeminiProvider(LLMProvider, VLMProvider):
 
         if self.client and types is not None:
             try:
+                # Ask for Gemini's native detection format. Requesting pixel
+                # coordinates instead gets 0-1000 values back under pixel-named
+                # keys, which then land in the wrong place on the image.
                 prompt = (
-                    f"Find the object '{target_description}' in this image. "
-                    f"Return ONLY a JSON object with the bounding box in this exact format: "
-                    f'{{"label": "{target_description}", "bbox": {{"u_min": <int>, "v_min": <int>, "u_max": <int>, "v_max": <int>}}, "confidence": <float 0-1>}}. '
-                    f"The image is {image_width}x{image_height} pixels. "
-                    f"Coordinates must be pixel values within the image bounds. "
-                    f"If the object is not found, return: {{\"label\": \"{target_description}\", \"bbox\": null, \"confidence\": 0.0}}"
+                    f"Detect '{target_description}' in this image. "
+                    "Return ONLY a JSON object: "
+                    '{"label": <string>, "box_2d": [ymin, xmin, ymax, xmax], "confidence": <float 0-1>} '
+                    "with box_2d normalized to 0-1000. Box the single object that best matches the "
+                    "description, tightly. If no such object is visible, return "
+                    '{"label": "none", "box_2d": null, "confidence": 0.0}. Do not guess.'
                 )
                 image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
                 models_to_try = [self.model_name] + [m for m in GEMINI_MODEL_CANDIDATES if m != self.model_name]
-                for model_name in models_to_try:
+                attempts = [m for m in models_to_try for _ in range(1 + MALFORMED_RETRIES)]
+                skip = None
+                for model_name in attempts:
+                    if model_name == skip:
+                        continue
                     try:
                         response = self.client.models.generate_content(
                             model=model_name,
@@ -378,8 +419,13 @@ class GeminiProvider(LLMProvider, VLMProvider):
                             config=types.GenerateContentConfig(response_mime_type="application/json"),
                         )
                         raw_text = getattr(response, "text", "") or ""
-                        data = _extract_json(raw_text)
-                        logger.info(f"Gemini VLM response ({model_name}): {raw_text[:500]}")
+                        logger.info(f"Gemini VLM response ({model_name}): {' '.join(raw_text.split())[:300]}")
+                        try:
+                            data = _extract_json(raw_text)
+                        except ValueError as e:
+                            logger.warning(f"Gemini VLM ({model_name}) returned malformed JSON ({e}); asking again.")
+                            continue
+                        self.model_name = model_name      # later calls start from the model that answered
 
                         if isinstance(data, list):
                             data = data[0] if data else {}
@@ -388,10 +434,15 @@ class GeminiProvider(LLMProvider, VLMProvider):
                             return None
 
                         bbox_data = (
-                            data.get("bbox") or data.get("box_2d")
-                            or data.get("bounding_box")
+                            data.get("box_2d") or data.get("bbox")
+                            or data.get("bounding_box") or data.get("box")
                         )
-                        confidence = float(data.get("confidence", 0.0))
+                        # The native detection format often omits a confidence;
+                        # a returned box with none stated is still a detection.
+                        raw_conf = data.get("confidence")
+                        confidence = float(raw_conf) if raw_conf is not None else 0.8
+                        if str(data.get("label", "")).strip().lower() == "none":
+                            bbox_data = None
 
                         if bbox_data is None or confidence < 0.1:
                             logger.info(f"Gemini VLM: target '{target_description}' not found (conf={confidence})")
@@ -400,9 +451,9 @@ class GeminiProvider(LLMProvider, VLMProvider):
                         box = self._bbox_to_pixels(bbox_data, image_width, image_height)
                         if box is None:
                             logger.warning(
-                                f"Gemini VLM: rejected box {bbox_data} for '{target_description}'"
+                                f"Gemini VLM: box {bbox_data} for '{target_description}' is not a box; asking again."
                             )
-                            return None
+                            continue
                         u_min, v_min, u_max, v_max = box
 
                         gate = bbox_plausibility(u_min, v_min, u_max, v_max, image_width, image_height)
@@ -422,6 +473,10 @@ class GeminiProvider(LLMProvider, VLMProvider):
                         )
                     except Exception as e:
                         logger.warning(f"Gemini VLM model '{model_name}' failed: {e}")
+                        if any(k in str(e) for k in _TRANSIENT):
+                            time.sleep(2.0)        # overloaded or slow: the same model gets another go
+                        else:
+                            skip = model_name      # quota or unknown model: move on to the next one
                         continue
 
                 logger.warning("All Gemini models failed for VLM resolve_target.")

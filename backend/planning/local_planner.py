@@ -31,7 +31,7 @@ def plan_from_intent(intent: ParsedIntent, context: Dict[str, Any] | None = None
         return [SkillPrimitive(skill="HOVER", params={"t": hover_t})]
     if intent.intent == "return":
         return [
-            SkillPrimitive(skill="MOVE_TO", params={"x": 0.0, "y": 0.0, "z": z, "speed": 0.4}),
+            SkillPrimitive(skill="RETURN", params={}),
             SkillPrimitive(skill="LAND", params={}),
         ]
     if intent.intent == "goto":
@@ -63,4 +63,11 @@ def plan_from_intent(intent: ParsedIntent, context: Dict[str, Any] | None = None
         if "land" in intent.normalized:
             skills.append(SkillPrimitive(skill="LAND", params={}))
         return skills
+    if intent.intent == "vision":
+        # No coordinates here: FIND is resolved by the perception stack at
+        # run time, and fails if the target cannot be seen.
+        return [
+            SkillPrimitive(skill="TAKEOFF", params={"z": z, "speed": 0.4}),
+            SkillPrimitive(skill="FIND", params={"target": intent.target or "object", "t": hover_t}),
+        ]
     return []

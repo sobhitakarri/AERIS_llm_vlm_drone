@@ -1,0 +1,5 @@
+plan: Target 'red bottle' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: hover at 1.29 m above it.
+t=958.5s  moved red bottle to (1.00, 1.50)
+mission done | error: None
+replans: 1   final hover is 5.0 cm from the object's new true position
+PASS

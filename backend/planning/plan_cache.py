@@ -57,16 +57,27 @@ def store_entry(
     command: str,
     request_payload: Dict[str, Any],
     response_payload: Dict[str, Any],
-    skills: List[SkillPrimitive],
+    skills: List[Any],
     *,
     allow_template: bool = True,
 ) -> None:
     store = load_store()
+    serialized = []
+    for s in skills:
+        if hasattr(s, "model_dump"):
+            serialized.append(s.model_dump())
+        elif isinstance(s, dict):
+            serialized.append(s)
+        else:
+            try:
+                serialized.append(dict(s))
+            except Exception:
+                serialized.append(str(s))
     rec = {
         "command": command,
         "request": request_payload,
         "response": response_payload,
-        "skills": [s.model_dump() for s in skills],
+        "skills": serialized,
     }
     store["exact"][normalize_command(command)] = rec
     if allow_template:

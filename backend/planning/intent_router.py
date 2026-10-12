@@ -39,6 +39,15 @@ _COMPOUND = re.compile(
 )
 
 
+_VISUAL = re.compile(
+    r"\b(?:find|locate|search for|look for|inspect|look at|approach|"
+    r"hover (?:at|above|over|near|beside|next to|facing)|"
+    r"circle(?: around)?|orbit(?: around)?|land (?:on|near|next to|beside)|"
+    r"go to|fly to|move to|navigate to)\s+(?:(?:the|a|an)\s+)?"
+    r"(?!(?:home|left|right|forward|back|backward|up|down|x|y|z|altitude|height|origin|start)\b)(?P<obj>[a-z].*)$"
+)
+
+
 def _is_land_only(cmd: str) -> bool:
     if not re.search(r"\bland\b|\blanding\b|\bcome down\b", cmd):
         return False
@@ -62,10 +71,13 @@ def parse_intent(command: str, context: Optional[Dict[str, Any]] = None) -> Pars
     cmd = normalize_command(raw)
     tmpl = template_key(raw)
     slots = _extract_slots(cmd, context)
-    vision = bool(re.search(r"\b(find|inspect|look at|search|bottle|cube|object)\b", cmd))
+    # A command is visual when an action verb is aimed at a named thing
+    # rather than at coordinates or a distance.
+    vm = _VISUAL.search(cmd)
+    vision = bool(vm) and not re.match(r"\s*(?:x\s*=|-?\d)", vm.group("obj"))
     compound = bool(_COMPOUND.search(cmd))
 
-    if vision and re.search(r"\b(find|inspect|look at|search)\b", cmd):
+    if vision:
         tgt = _extract_target(cmd)
         # Conditionals / extra maneuvers need Gemini or VLM, not the FIND template.
         use_code = not compound
@@ -106,9 +118,9 @@ def parse_intent(command: str, context: Optional[Dict[str, Any]] = None) -> Pars
 
 
 def _extract_target(cmd: str) -> str:
-    m = re.search(r"(?:find|inspect|look at|search for)\s+(?:the\s+)?(.+)$", cmd)
+    m = _VISUAL.search(cmd)
     if m:
-        return m.group(1).strip()
+        return m.group("obj").strip()
     return "object"
 
 
@@ -117,7 +129,7 @@ def _extract_slots(cmd: str, context: Optional[Dict[str, Any]]) -> Dict[str, flo
     ctx = context or {}
     pose = ctx.get("pose") or {}
 
-    m = re.search(r"(?:to|at|altitude|height)\s*(-?\d+(?:\.\d+)?)\s*m?", cmd)
+    m = re.search(r"(?:to|at|altitude|height|fly)\s*(-?\d+(?:\.\d+)?)\s*m?", cmd)
     if m:
         slots["z"] = float(m.group(1))
     else:

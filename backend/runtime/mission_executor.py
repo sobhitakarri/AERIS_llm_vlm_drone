@@ -3,10 +3,10 @@ Mission Executor Runtime — Perception-Action Loop.
 """
 import math
 import threading
+import time
 from typing import Any, Callable, List, Optional
 from backend.drone.base_interface import DroneInterface
 from backend.schemas.mission import MissionPlan
-from backend.schemas.perception import DetectedObject
 from backend.runtime.uav_monitor import UavMonitor
 from backend.runtime.state_manager import StateManager
 from backend.runtime.event_bus import (
@@ -17,16 +17,21 @@ from backend.runtime.event_bus import (
     EVENT_MISSION_FINISHED,
     EVENT_ABORT,
 )
+from backend.planning.obstacle_planner import plan_path
 from backend.vision.spatial_grounding import SpatialGrounding
 from backend.core.logger import get_logger
 
 logger = get_logger("MissionExecutor")
 
+_FIND_TIMEOUT_S = 25.0       # how long FIND waits for the perception stack to lock on
+_DEFAULT_SPEED = 0.4
+
 
 class MissionExecutor:
     """
-    Executes a validated mission plan sequentially by calling DroneInterface hardware primitives.
-    Implements a closed-loop Perception-Action loop for FIND and INSPECT skills using VLM visual grounding.
+    Executes a validated mission plan sequentially by calling DroneInterface skills.
+    FIND and INSPECT are resolved against the live perception state, and every
+    translation is routed around what the depth camera sees.
     """
 
     def __init__(
@@ -38,6 +43,8 @@ class MissionExecutor:
         state_manager: Optional[StateManager] = None,
         camera_manager: Optional[Any] = None,
         event_bus: Optional[Any] = None,
+        perception: Optional[Any] = None,
+        capabilities: Optional[Any] = None,
     ):
         self.drone = drone
         self.monitor = monitor or UavMonitor()
@@ -46,6 +53,13 @@ class MissionExecutor:
         self.state_manager = state_manager
         self.camera_manager = camera_manager
         self.event_bus = event_bus or default_event_bus
+        self.perception = perception
+        # True when a background loop is driving `perception`; otherwise FIND
+        # runs one detection itself.
+        self.perception_live = perception is not None
+        self.capabilities = capabilities
+        self.last_error: Optional[str] = None
+        self.last_route: List[tuple] = []
         self._lock = threading.Lock()
         self._pending_replan: Optional[List] = None
         self._busy = False
@@ -84,12 +98,205 @@ class MissionExecutor:
                 return False
             self._busy = True
             self._pending_replan = None
+        self.last_error = None
         try:
             return self._run(plan, on_step_complete)
         finally:
             with self._lock:
                 self._busy = False
 
+    def return_home(self) -> bool:
+        """Fly back to the home pad along a planned route and land. Runs as
+        its own short mission so it cannot overlap another one."""
+        with self._lock:
+            if self._busy:
+                return False
+            self._busy = True
+        self.last_error = None
+        try:
+            st = self.drone.get_state()
+            if not st.is_armed:
+                return True
+            self.monitor.arm_mission(2)
+            self.monitor.note_step(1, "RETURN")
+            hx, hy = self.drone.home_position()
+            ok = self._fly_to(hx, hy, max(st.z, self._z_limits()[0] + 0.3))
+            self.monitor.note_step(2, "LAND")
+            ok = ok and self.drone.land()
+            if not ok:
+                self._safe_abort_flight()
+            self.monitor.finish(ok)
+            return ok
+        finally:
+            with self._lock:
+                self._busy = False
+
+    # ------------------------------------------------------------------ motion
+    def _z_limits(self) -> tuple:
+        ws = getattr(self.capabilities, "workspace", None)
+        if ws is not None:
+            return float(ws.z_min), float(ws.z_max)
+        return 0.2, 1.5
+
+    def _fly_to(self, x: float, y: float, z: float, speed: float = _DEFAULT_SPEED) -> bool:
+        """MOVE_TO with obstacle-aware routing when a depth map is available."""
+        st = self.drone.get_state()
+        start, goal = (st.x, st.y, st.z), (float(x), float(y), float(z))
+        grid = None
+        if getattr(self.grounding, "has_depth", False):
+            try:
+                grid = self.grounding.occupancy_grid()
+            except Exception as exc:
+                logger.warning("Obstacle map unavailable (%s); flying direct.", exc)
+        waypoints, how = plan_path(start, goal, grid, self._z_limits())
+        if waypoints is None:
+            self.last_error = f"No safe route to ({x:.2f}, {y:.2f}, {z:.2f}): {how}."
+            logger.error(self.last_error)
+            return False
+        if len(waypoints) > 1 or how != "direct":
+            logger.info("Route to (%.2f, %.2f, %.2f): %s, %d leg(s).", x, y, z, how, len(waypoints))
+        self.last_route = [start] + list(waypoints)
+        for wp in waypoints:
+            if self.monitor.aborted():
+                return False
+            if not self.drone.move_to(wp[0], wp[1], wp[2], speed):
+                self.last_error = f"Could not reach waypoint ({wp[0]:.2f}, {wp[1]:.2f}, {wp[2]:.2f})."
+                return False
+        return True
+
+    def _land(self) -> bool:
+        """Land where the vehicle is if the floor below is clear, otherwise
+        go back to the home pad first."""
+        st = self.drone.get_state()
+        if getattr(self.grounding, "has_depth", False) and st.z > 0.15:
+            below = self.grounding.obstacle_height(st.x, st.y, radius=0.18)
+            if below > 0.05:
+                hx, hy = self.drone.home_position()
+                logger.info("Landing zone not clear (%.2f m surface below); returning to the home pad.", below)
+                if not self._fly_to(hx, hy, st.z):
+                    return False
+        return self.drone.land()
+
+    def _rotate(self, params: dict) -> bool:
+        if "yaw" in params:
+            # Absolute heading: turn by the shortest difference from where we are.
+            delta = (float(params["yaw"]) - self.drone.get_state().yaw + 180.0) % 360.0 - 180.0
+            return True if abs(delta) < 2.0 else self.drone.rotate(delta)
+        return self.drone.rotate(float(params.get("angle", 90.0)))
+
+    def _circle(self, params: dict) -> bool:
+        radius = float(params.get("radius", 0.5))
+        st = self.drone.get_state()
+        if all(k in params for k in ("x", "y")):
+            cx, cy = float(params["x"]), float(params["y"])
+            start = math.atan2(st.y - cy, st.x - cx)
+        else:
+            # No centre given: orbit about a point one radius ahead of the nose.
+            heading = math.radians(st.yaw)
+            cx, cy = st.x + radius * math.cos(heading), st.y + radius * math.sin(heading)
+            start = heading + math.pi
+        cz = st.z
+        logger.info(f"Orbit around ({cx:.2f}, {cy:.2f}) radius={radius} m at {cz:.2f} m")
+        n_points = 12
+        for k in range(1, n_points + 1):
+            ang = start + 2.0 * math.pi * k / n_points
+            if not self._fly_to(cx + radius * math.cos(ang), cy + radius * math.sin(ang), cz):
+                return False
+        return True
+
+    # -------------------------------------------------------------- perception
+    def _find(self, params: dict) -> bool:
+        target = params.get("target", "object")
+        hover_t = float(params.get("t", 2.0))
+        if all(k in params for k in ("x", "y", "z")):
+            return self._fly_to(params["x"], params["y"], params["z"]) and self.drone.hover(hover_t)
+
+        logger.info(f"Perception-Action Loop: locating '{target}'")
+        pos = self._resolve_visual_target(target)
+        if pos is None:
+            # Do not fly anywhere on a target that was not seen. Hold, then
+            # report the step as failed so the mission ends under control.
+            self.last_error = f"Target '{target}' was not found by the perception stack."
+            logger.warning(self.last_error)
+            self.drone.hover(1.0)
+            return False
+        gx, gy, gz = pos
+        z_min, z_max = self._z_limits()
+        gz = max(z_min, min(z_max, gz))
+        logger.info(f"Perception-Action Loop: flying to '{target}' at ({gx:.2f}, {gy:.2f}, {gz:.2f}) m")
+        return self._fly_to(gx, gy, gz) and self.drone.hover(hover_t)
+
+    def _resolve_visual_target(self, target_label: str) -> Optional[tuple]:
+        """Position of a target from the live perception state.
+
+        The background loop does the detecting and tracking; this waits for it
+        to report an actionable lock. A label explicitly marked lost is not
+        waited for and never falls back to its last known pose.
+        """
+        if self.state_manager is not None and not self._searchable(target_label):
+            return None
+        if not self.perception_live:
+            return self._detect_once(target_label)
+        if hasattr(self.perception, "set_targets"):
+            if target_label not in getattr(self.perception, "active_targets", []):
+                self.perception.set_targets(list(getattr(self.perception, "active_targets", [])) + [target_label])
+        clock = self.drone.sim_time if hasattr(self.drone, "sim_time") else time.time
+        deadline = clock() + _FIND_TIMEOUT_S
+        wall_deadline = time.time() + 6 * _FIND_TIMEOUT_S
+        while clock() < deadline and time.time() < wall_deadline:
+            if self.monitor.aborted():
+                return None
+            live = self._lookup_state_target(target_label)
+            if live:
+                return live
+            if self.state_manager is None or self.perception is None:
+                break
+            time.sleep(0.2)
+        return self._lookup_state_target(target_label)
+
+    def _searchable(self, target_label: str) -> bool:
+        """False for a label the perception stack has explicitly marked lost:
+        its last pose must not be flown to, and it is not re-searched here."""
+        needle = (target_label or "").lower()
+        for obj in self.state_manager.get_all_objects():
+            label = (obj.label or "").lower()
+            if needle in label or label in needle:
+                return bool(obj.actionable and obj.world_x is not None)
+        return True
+
+    def _detect_once(self, target_label: str) -> Optional[tuple]:
+        """Single detect-and-ground for use without a background perception loop."""
+        live = self._lookup_state_target(target_label)
+        if live:
+            return live
+        if self.vlm is None:
+            return None
+        if self.perception is None:
+            from backend.vision.fast_cv import FastPerception
+            self.perception = FastPerception(grounding=self.grounding, vlm=self.vlm, state_manager=self.state_manager)
+        frame = self.drone.get_frame() if hasattr(self.drone, "get_frame") else None
+        if frame is None and self.camera_manager:
+            frame = self.camera_manager.read_frame()
+        det = self.perception.locate(frame, target_label, z_altitude=max(self.drone.get_state().z, 0.4))
+        if det is None or det.world_x is None:
+            return None
+        if self.event_bus:
+            self.event_bus.publish(EVENT_OBJECT_DETECTED, det.model_dump())
+        return det.world_x, det.world_y, det.world_z or self.drone.get_state().z
+
+    def _lookup_state_target(self, target_label: str) -> Optional[tuple]:
+        if not self.state_manager:
+            return None
+        needle = (target_label or "").lower()
+        for obj in self.state_manager.get_actionable_objects():
+            label = (obj.label or "").lower()
+            if obj.world_x is None:
+                continue
+            if needle in label or label in needle or needle.replace(" ", "_") in label:
+                return obj.world_x, obj.world_y, obj.world_z or self.drone.get_state().z
+        return None
+
+    # --------------------------------------------------------------- main loop
     def _run(self, plan: MissionPlan, on_step_complete: Optional[Callable[[str], None]] = None) -> bool:
         logger.info(f"Executing mission plan with {len(plan.skills)} steps...")
 
@@ -107,88 +314,46 @@ class MissionExecutor:
 
             item = queue[i]
             skill = item.skill.upper()
-            params = item.params
+            params = item.params or {}
             self.monitor.note_step(i + 1, skill)
             logger.info(f"Executing step {i+1}/{len(queue)}: {skill} with params={params}")
 
             if self.event_bus:
                 self.event_bus.publish(EVENT_STEP_STARTED, {"step": i + 1, "skill": skill, "params": params})
 
+            speed = float(params.get("speed", _DEFAULT_SPEED))
             success = False
             if skill == "TAKEOFF":
-                z = params.get("z", 1.0)
-                success = self.drone.takeoff(altitude=z)
+                success = self.drone.takeoff(altitude=params.get("z", 1.0))
             elif skill == "LAND":
-                success = self.drone.land()
+                success = self._land()
             elif skill == "HOVER":
-                t = params.get("t", 2.0)
-                success = self.drone.hover(duration=t)
+                success = self.drone.hover(duration=params.get("t", 2.0))
             elif skill == "MOVE_TO":
-                x = params.get("x", 0.0)
-                y = params.get("y", 0.0)
-                z = params.get("z", 1.0)
-                success = self.drone.move_to(x, y, z)
+                st = self.drone.get_state()
+                success = self._fly_to(params.get("x", st.x), params.get("y", st.y), params.get("z", st.z), speed)
             elif skill == "ROTATE":
-                angle = params.get("angle", 90.0)
-                success = self.drone.rotate(angle)
+                success = self._rotate(params)
             elif skill == "CIRCLE":
-                radius = float(params.get("radius", 0.5))
-                state = self.drone.get_state()
-                cx, cy, cz = state.x, state.y, max(state.z, 1.0)
-                logger.info(f"Flying orbital trajectory around ({cx:.2f}, {cy:.2f}) radius={radius}m...")
-                success = True
-                n_points = 8
-                for k in range(1, n_points + 1):
-                    ang = 2.0 * math.pi * k / n_points
-                    ok = self.drone.move_to(
-                        cx + radius * math.cos(ang),
-                        cy + radius * math.sin(ang),
-                        cz,
-                    )
-                    if not ok:
-                        success = False
-                        break
-            elif skill in ["FIND", "INSPECT"]:
-                target = params.get("target", "object")
-                logger.info(f"Perception-Action Loop: Visual tracking active for target '{target}'")
-                if self.state_manager and not self._target_actionable(target):
-                    # TARGET_LOST: do not fly to the last known world pose.
-                    logger.warning(
-                        "TARGET_LOST for '%s' — holding position; stale coordinates "
-                        "cannot generate a movement command.",
-                        target,
-                    )
-                    success = self.drone.hover(duration=2.0)
-                else:
-                    grounded_pos = self._resolve_visual_target(target)
-                    if grounded_pos:
-                        gx, gy, gz = grounded_pos
-                        logger.info(
-                            f"Perception-Action Loop: Moving drone to detected target '{target}' "
-                            f"at ({gx:.2f}, {gy:.2f}, {gz:.2f})m"
-                        )
-                        success = self.drone.move_to(gx, gy, gz)
-                        if success:
-                            hover_dur = float(params.get("t", 2.0))
-                            self.drone.hover(duration=hover_dur)
-                    elif all(k in params for k in ("x", "y", "z")):
-                        success = self.drone.move_to(params["x"], params["y"], params["z"])
-                    else:
-                        logger.warning(f"Target '{target}' could not be localized in current view; hovering for observation.")
-                        success = self.drone.hover(duration=2.0)
-
+                success = self._circle(params)
+            elif skill in ("FIND", "INSPECT"):
+                success = self._find(params)
             elif skill == "RETURN":
-                success = self.drone.move_to(0.0, 0.0, 1.0)
+                hx, hy = self.drone.home_position()
+                success = self._fly_to(hx, hy, max(self.drone.get_state().z, self._z_limits()[0] + 0.3), speed)
             else:
                 logger.error(f"Unhandled skill '{skill}' — not in the executor dispatch table.")
-                success = False
 
             if not success:
-                logger.error(f"Execution failed at step {i+1}: {skill}")
+                if not self.last_error:
+                    self.last_error = f"{skill} failed at step {i + 1}."
+                logger.error(f"Execution failed at step {i+1}: {skill} ({self.last_error})")
                 self._safe_abort_flight()
                 self.monitor.finish(False)
                 if self.event_bus:
-                    self.event_bus.publish(EVENT_MISSION_FINISHED, {"success": False, "step": i + 1, "skill": skill})
+                    self.event_bus.publish(EVENT_MISSION_FINISHED, {
+                        "success": False, "step": i + 1, "skill": skill, "error": self.last_error,
+                    })
                 return False
 
             if self.event_bus:
@@ -215,90 +380,3 @@ class MissionExecutor:
         if self.event_bus:
             self.event_bus.publish(EVENT_MISSION_FINISHED, {"success": True})
         return True
-
-    def _resolve_visual_target(self, target_label: str) -> Optional[tuple]:
-        """
-        Closed-loop visual grounding:
-        Captures camera frame -> calls VLM -> computes 3D coordinates via homography -> updates StateManager.
-        """
-        live = self._lookup_state_target(target_label)
-        if live:
-            return live
-
-        # 1. Capture current camera frame (drone camera or external camera manager)
-        frame = None
-        if hasattr(self.drone, "get_frame"):
-            frame = self.drone.get_frame()
-        if frame is None and self.camera_manager:
-            frame = self.camera_manager.read_frame()
-
-        # 2. VLM visual grounding
-        if frame is not None and self.vlm and hasattr(self.vlm, "resolve_target"):
-            try:
-                import cv2
-                _, enc = cv2.imencode(".jpg", frame)
-                img_h, img_w = frame.shape[:2]
-                det = self.vlm.resolve_target(
-                    enc.tobytes(),
-                    target_label,
-                    image_width=img_w,
-                    image_height=img_h,
-                )
-                if det and det.bbox:
-                    u, v = det.bbox.center_pixel
-                    state = self.drone.get_state()
-                    z_alt = max(state.z, 1.0)
-                    wx, wy, wz = self.grounding.pixel_to_world(
-                        u, v, z_altitude=z_alt, img_w=img_w, img_h=img_h
-                    )
-                    det.world_x = wx
-                    det.world_y = wy
-                    det.world_z = wz
-
-                    # Cache detection in global synchronized state store
-                    if self.state_manager:
-                        self.state_manager.update_object(det)
-
-                    # Notify event subscribers
-                    if self.event_bus:
-                        self.event_bus.publish(EVENT_OBJECT_DETECTED, det.model_dump())
-
-                    logger.info(
-                        f"[Perception-Action Loop] VLM detected '{target_label}' at pixel ({u}, {v}) "
-                        f"-> World ({wx:.2f}, {wy:.2f}, {wz:.2f})m conf={det.confidence}"
-                    )
-                    return wx, wy, wz
-            except Exception as e:
-                logger.error(f"[Perception-Action Loop] VLM grounding error: {e}")
-
-        return self._lookup_state_target(target_label)
-
-    def _target_actionable(self, target_label: str) -> bool:
-        """True only when a live detection currently authorises motion.
-
-        A missing label is treated as unknown-but-searchable (FIND at the start
-        of a mission). An explicit TARGET_LOST mark is not."""
-        if not self.state_manager:
-            return True
-        needle = (target_label or "").lower()
-        for obj in self.state_manager.get_all_objects():
-            label = (obj.label or "").lower()
-            if needle in label or label in needle or needle.replace(" ", "_") in label:
-                return bool(obj.actionable and obj.world_x is not None)
-        return True
-
-    def _lookup_state_target(self, target_label: str) -> Optional[tuple]:
-        if not self.state_manager:
-            return None
-        needle = (target_label or "").lower()
-        for obj in self.state_manager.get_actionable_objects():
-            label = (obj.label or "").lower()
-            if obj.world_x is None:
-                continue
-            if needle in label or label in needle or needle.replace(" ", "_") in label:
-                logger.info(
-                    f"[Perception-Action Loop] Found live state for '{target_label}': "
-                    f"({obj.world_x}, {obj.world_y})"
-                )
-                return obj.world_x, obj.world_y, obj.world_z or 1.0
-        return None

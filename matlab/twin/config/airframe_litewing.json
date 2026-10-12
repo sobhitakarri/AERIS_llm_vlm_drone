@@ -1,0 +1,93 @@
+{
+  "name": "LiteWing ESP32-S3",
+  "notes": "Nominal values. Mass, arm length and inertia are the project's existing LiteWing figures. Propulsion constants are scaled from published Crazyflie 2.x identification (Foerster 2015) to the 55 mm LiteWing propeller and are NOT yet identified on hardware; replace them after a thrust-stand test.",
+  "mass_kg": 0.033,
+  "arm_m": 0.045,
+  "inertia_kgm2": [
+    1.65e-05,
+    1.65e-05,
+    2.92e-05
+  ],
+  "hull_m": [
+    0.092,
+    0.092,
+    0.024
+  ],
+  "rotor": {
+    "layout": "X",
+    "spin": [
+      1,
+      -1,
+      1,
+      -1
+    ],
+    "radius_m": 0.0275,
+    "kT_N_per_rad2s2": 5.9e-08,
+    "kQ_Nm_per_rad2s2": 4.2e-10,
+    "inertia_kgm2": 9e-08,
+    "omega_max_rad_s": 1750,
+    "tau_up_s": 0.03,
+    "tau_down_s": 0.045
+  },
+  "aero": {
+    "rotor_drag_N_s_per_m_rad": 1.2e-06,
+    "cd_area_m2": 0.0035,
+    "ground_effect": true
+  },
+  "battery": {
+    "cells": 1,
+    "capacity_Ah": 0.55,
+    "r_internal_ohm": 0.1,
+    "ocv_soc": [
+      0.0,
+      0.1,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "ocv_v": [
+      3.3,
+      3.6,
+      3.7,
+      3.78,
+      3.87,
+      4.02,
+      4.2
+    ],
+    "v_nominal": 3.8,
+    "drive_efficiency": 0.45,
+    "avionics_A": 0.15
+  },
+  "sensors": {
+    "imu_rate_hz": 1000,
+    "gyro_noise_density_rad_s_rtHz": 8.7e-05,
+    "gyro_bias_rad_s": 0.01,
+    "gyro_bias_walk_rad_s2_rtHz": 2e-05,
+    "accel_noise_density_m_s2_rtHz": 0.0039,
+    "accel_bias_m_s2": 0.15,
+    "tof_rate_hz": 50,
+    "tof_sigma_m": 0.005,
+    "tof_max_m": 4.0,
+    "flow_rate_hz": 100,
+    "flow_sigma_m_s_per_m": 0.03,
+    "flow_min_height_m": 0.08
+  },
+  "control": {
+    "rate_hz": 500,
+    "rate_bandwidth_rad_s": 28,
+    "attitude_bandwidth_rad_s": 8,
+    "velocity_bandwidth_rad_s": 2.8,
+    "position_bandwidth_rad_s": 1.2,
+    "yaw_bandwidth_rad_s": 3.0,
+    "tilt_max_deg": 25,
+    "v_max_xy_m_s": 1.0,
+    "v_max_z_m_s": 0.8,
+    "a_max_m_s2": 2.5,
+    "v_land_m_s": 0.25,
+    "yaw_rate_max_deg_s": 120,
+    "climb_rate_bandwidth_rad_s": 4.0,
+    "altitude_bandwidth_rad_s": 1.6
+  }
+}

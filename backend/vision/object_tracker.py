@@ -27,7 +27,7 @@ logger = get_logger("ObjectTracker")
 # Tracker choice is measured, not assumed: on a 640x480 fixed overhead feed CSRT
 # holds ~0.89 IoU at ~57 FPS, KCF ~0.80 at ~210 FPS, and MIL never reports loss
 # at all (which makes escalation impossible). Prefer CSRT, fall back to KCF.
-_TRACKER_PREFERENCE = ("CSRT", "KCF")
+_TRACKER_PREFERENCE = ("CSRT", "KCF", "MIL")
 
 _MAX_SCALE_DRIFT = 3.0      # box may not grow/shrink beyond this factor
 _MAX_ASPECT_DRIFT = 2.5     # nor change shape beyond this
@@ -276,16 +276,27 @@ class ObjectTracker:
 
     def _template_score(self, frame: np.ndarray, bbox: BoundingBox) -> Optional[float]:
         """Normalised correlation of the current crop against the VLM-confirmed
-        one. CSRT does not expose its filter response, so this stands in for the
-        confidence the tracker will not give us."""
+        one. Allows a small search margin to absorb inter-frame tracker lag."""
         if self._template is None:
             return None
-        patch = self._crop(frame, bbox)
-        if patch is None:
+        fh, fw = frame.shape[:2]
+        bw = max(1, bbox.u_max - bbox.u_min)
+        bh = max(1, bbox.v_max - bbox.v_min)
+        pad = max(4, int(0.25 * max(bw, bh)))
+        u0 = max(0, bbox.u_min - pad)
+        v0 = max(0, bbox.v_min - pad)
+        u1 = min(fw, bbox.u_max + pad)
+        v1 = min(fh, bbox.v_max + pad)
+        search_patch = frame[v0:v1, u0:u1]
+        if search_patch.size == 0:
             return None
         try:
             import cv2
-            res = cv2.matchTemplate(patch, self._template, cv2.TM_CCOEFF_NORMED)
+            tw, th = 32, 32
+            sw = max(tw + 2, int(round((u1 - u0) / bw * tw)))
+            sh = max(th + 2, int(round((v1 - v0) / bh * th)))
+            search_resized = cv2.resize(search_patch, (sw, sh))
+            res = cv2.matchTemplate(search_resized, self._template, cv2.TM_CCOEFF_NORMED)
             return float(res.max())
         except Exception:
             return None

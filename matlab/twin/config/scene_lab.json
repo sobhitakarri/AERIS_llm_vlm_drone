@@ -1,0 +1,41 @@
+{
+  "name": "Indoor flight lab",
+  "notes": "Single source of truth for the twin's world. World frame: origin at the room centre on the floor, x forward, y left, z up, metres. Yaw in degrees about +z. The planner never reads object poses from this file: they reach Python only as ground truth for scoring.",
+  "room": { "size_m": [6.0, 5.0, 3.0] },
+  "workspace": { "x": [-2.3, 2.3], "y": [-1.9, 1.9], "z": [0.25, 2.0] },
+  "home": { "pos": [-1.8, -1.4], "yaw_deg": 0 },
+  "wind": { "mean_m_s": [0.0, 0.0, 0.0], "gust_sigma_m_s": 0.04, "gust_tau_s": 1.5 },
+  "cameras": {
+    "overhead": { "pos": [0.0, 0.0, 2.92], "yaw_deg": 90, "hfov_deg": 100, "size_px": [960, 720], "rate_hz": 10 },
+    "fpv": { "mount_m": [0.03, 0.0, 0.0], "tilt_down_deg": 20, "hfov_deg": 110, "size_px": [480, 360], "rate_hz": 10 },
+    "chase": { "pos": [-2.85, -2.35, 2.2], "look_at": [0.3, 0.2, 0.5], "hfov_deg": 80, "size_px": [640, 360], "rate_hz": 10 }
+  },
+  "markers": {
+    "dictionary": "DICT_4X4_50",
+    "size_m": 0.30,
+    "items": [
+      { "id": 0, "pos": [-2.5, -2.0] },
+      { "id": 1, "pos": [ 2.5, -2.0] },
+      { "id": 2, "pos": [ 2.55, -0.6] },
+      { "id": 3, "pos": [-2.5,  2.0] },
+      { "id": 4, "pos": [ 0.0, -2.1] },
+      { "id": 5, "pos": [-1.2,  2.15] }
+    ]
+  },
+  "objects": [
+    { "name": "workbench",      "type": "table",        "pos": [1.55, 1.25, 0.0],  "yaw_deg": 0,   "size_m": [1.4, 0.7, 0.75],  "collide": true },
+    { "name": "red_bottle",     "type": "bottle",       "pos": [1.20, 1.20, 0.75], "yaw_deg": 0,   "size_m": [0.08, 0.08, 0.26], "color": [0.80, 0.05, 0.05], "movable": true },
+    { "name": "blue_cube",      "type": "box",          "pos": [1.75, 1.30, 0.75], "yaw_deg": 15,  "size_m": [0.18, 0.18, 0.18], "color": [0.06, 0.22, 0.75], "material": "plastic" },
+    { "name": "laptop",         "type": "laptop",       "pos": [2.00, 1.05, 0.75], "yaw_deg": 200, "size_m": [0.34, 0.24, 0.22] },
+    { "name": "cardboard_box",  "type": "box",          "pos": [-1.60, 1.10, 0.0], "yaw_deg": 20,  "size_m": [0.45, 0.40, 0.38], "material": "cardboard", "collide": true },
+    { "name": "small_carton",   "type": "box",          "pos": [-1.25, 1.50, 0.0], "yaw_deg": -30, "size_m": [0.30, 0.25, 0.22], "material": "cardboard", "collide": true },
+    { "name": "steel_drum",     "type": "drum",         "pos": [1.45, -0.85, 0.0], "yaw_deg": 0,   "size_m": [0.40, 0.40, 0.60], "color": [0.10, 0.36, 0.52], "collide": true },
+    { "name": "traffic_cone",   "type": "cone",         "pos": [0.20, -0.90, 0.0], "yaw_deg": 0,   "size_m": [0.28, 0.28, 0.46], "movable": true },
+    { "name": "fire_extinguisher", "type": "extinguisher", "pos": [-2.75, 0.30, 0.0], "yaw_deg": 0, "size_m": [0.15, 0.15, 0.50] },
+    { "name": "storage_shelf",  "type": "shelf",        "pos": [0.20, 2.25, 0.0],  "yaw_deg": 0,   "size_m": [1.6, 0.42, 1.8],   "collide": true },
+    { "name": "office_chair",   "type": "chair",        "pos": [2.35, 0.25, 0.0],  "yaw_deg": 120, "size_m": [0.50, 0.50, 0.92], "collide": true },
+    { "name": "potted_plant",   "type": "plant",        "pos": [-2.55, -1.20, 0.0], "yaw_deg": 0,  "size_m": [0.42, 0.42, 0.95], "collide": true },
+    { "name": "yellow_crate",   "type": "crate",        "pos": [-0.55, 0.35, 0.0], "yaw_deg": 35,  "size_m": [0.40, 0.30, 0.24], "color": [0.92, 0.70, 0.05], "collide": true },
+    { "name": "partition_wall", "type": "partition",    "pos": [-0.45, -1.75, 0.0], "yaw_deg": 90, "size_m": [1.2, 0.06, 1.2],   "collide": true }
+  ]
+}

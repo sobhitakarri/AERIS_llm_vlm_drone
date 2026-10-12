@@ -1,0 +1,18 @@
+[1] Find the cardboard box and hover above it
+      PASS {'status': 'done', 'error': None, 'path_m': 3.57, 'estimator_error_cm': 1.6, 'target_error_cm': 3.0, 'clearance_m': 0.32}
+[2] Find the red bottle and hover above it for 4 seconds
+      FAIL {'status': 'done', 'error': None, 'path_m': 4.77, 'estimator_error_cm': 2.2, 'target_error_cm': 129.6, 'clearance_m': -0.44}
+[3] Inspect the blue cube from 0.5 m away
+      FAIL {'status': 'done', 'error': None, 'path_m': 4.72, 'estimator_error_cm': 2.2, 'standoff_error_cm': 146.0, 'heading_error_deg': 76.0}
+[4] Find the steel drum and hover above its center
+      FAIL {'status': 'done', 'error': None, 'path_m': 6.03, 'estimator_error_cm': 2.5, 'target_error_cm': 209.8, 'clearance_m': 0.48}
+[5] Go to the yellow crate
+      PASS {'status': 'done', 'error': None, 'path_m': 3.09, 'estimator_error_cm': 2.2, 'target_error_cm': 3.8, 'clearance_m': 0.33}
+[6] Find the traffic cone and hover facing it
+      PASS {'status': 'done', 'error': None, 'path_m': 2.93, 'estimator_error_cm': 2.8, 'standoff_error_cm': 3.8, 'heading_error_deg': 0.4}
+[7] Take off to 0.8 m and fly in a square
+      PASS {'status': 'done', 'error': None, 'path_m': 8.14}
+[8] Find the purple elephant and hover above it
+      PASS {'status': 'refused'}
+
+5/8 passed. Results in D:\UG\B.TECH\7th\Project_phase1\reports\twin_results\metrics

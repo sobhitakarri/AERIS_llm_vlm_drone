@@ -1,6 +1,6 @@
 """
 Framework CLI Entry Point.
-Run with: python -m backend.main --backend gemini --drone matlab
+Run with: python -m backend.main --backend gemini --drone twin
 """
 import argparse
 import uvicorn
@@ -18,7 +18,13 @@ def main():
                         help="LLM/VLM Model Backend. "
                              "'qwen'/'qwen25'/'local' = offline split (Qwen2-VL-2B for VLM + Qwen2.5-3B for planning). "
                              "'gemini' = Gemini Flash API.")
-    parser.add_argument("--drone", type=str, default="sim", choices=["sim", "real", "matlab", "pysimverse"], help="Drone Execution Target (sim | real | matlab | pysimverse)")
+    parser.add_argument("--drone", type=str, default="sim",
+                        choices=["twin", "sim", "real"],
+                        help="Drone execution target. 'twin' = Simulink/Simscape/Unreal digital twin "
+                             "(start it in MATLAB with run_aeris_twin). 'sim' = kinematic stand-in, no physics. "
+                             "'real' = LiteWing over Wi-Fi.")
+    parser.add_argument("--launch-twin", action="store_true",
+                        help="With --drone twin: start MATLAB and the twin if it is not already running.")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address")
     parser.add_argument("--port", type=int, default=8000, help="Port number")
 
@@ -32,7 +38,7 @@ def main():
             logger.warning("Put the key in .env (not only .env.example). Get one at https://aistudio.google.com/apikey")
         else:
             logger.info(f"GEMINI_API_KEY loaded from .env ({len(key)} chars).")
-    app = create_app(drone_mode=args.drone, model_mode=args.backend)
+    app = create_app(drone_mode=args.drone, model_mode=args.backend, launch_twin=args.launch_twin)
 
     uvicorn.run(app, host=args.host, port=args.port)
 

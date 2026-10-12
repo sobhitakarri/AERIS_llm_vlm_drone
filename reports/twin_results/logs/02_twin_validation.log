@@ -1,0 +1,42 @@
+[build] aeris_twin_core (120 blocks) saved to D:\UG\B.TECH\7th\Project_phase1\matlab\twin\models\aeris_twin_core.slx
+
+=== Twin validation: LiteWing ESP32-S3, estimator ground truth ===
+real-time factor (no rendering)   0.91
+hover throttle / rotor speed      0.64 / 11179 rpm
+take-off settle / overshoot       1.43 s / 0.0 cm
+tracking RMSE / max               1.4 / 5.4 cm
+waypoint arrival error            [0.3 0.3 0.1 0.2] cm
+max tilt                          18.4 deg
+yaw after 90 deg step             90.0 deg
+estimator RMSE / final xy drift   0.0 / 0.0 cm
+landed / landing xy error         1 / 0.1 cm
+battery used / minimum voltage    3.16 % / 3.93 V
+Figure and metrics written to D:\UG\B.TECH\7th\Project_phase1\cache\twin_validation
+[build] aeris_twin_core (120 blocks) saved to D:\UG\B.TECH\7th\Project_phase1\matlab\twin\models\aeris_twin_core.slx
+
+=== Twin validation: LiteWing ESP32-S3, estimator onboard ===
+real-time factor (no rendering)   2.30
+hover throttle / rotor speed      0.64 / 11178 rpm
+take-off settle / overshoot       1.35 s / 0.0 cm
+tracking RMSE / max               4.8 / 13.1 cm
+waypoint arrival error            [2.7 2.9 2.4 2.5] cm
+max tilt                          18.8 deg
+yaw after 90 deg step             90.1 deg
+estimator RMSE / final xy drift   1.9 / 1.8 cm
+landed / landing xy error         1 / 2.3 cm
+battery used / minimum voltage    3.16 % / 3.90 V
+Figure and metrics written to D:\UG\B.TECH\7th\Project_phase1\cache\twin_validation
+[build] aeris_twin_core (120 blocks) saved to D:\UG\B.TECH\7th\Project_phase1\matlab\twin\models\aeris_twin_core.slx
+
+=== Twin validation: Holybro X500 v2 (Pixhawk class), estimator onboard ===
+real-time factor (no rendering)   1.11
+hover throttle / rotor speed      0.71 / 7224 rpm
+take-off settle / overshoot       1.51 s / 7.2 cm
+tracking RMSE / max               6.6 / 16.9 cm
+waypoint arrival error            [1.4 1.3 2.6 2.3] cm
+max tilt                          16.9 deg
+yaw after 90 deg step             89.7 deg
+estimator RMSE / final xy drift   1.5 / 1.5 cm
+landed / landing xy error         1 / 1.8 cm
+battery used / minimum voltage    4.34 % / 15.96 V
+Figure and metrics written to D:\UG\B.TECH\7th\Project_phase1\cache\twin_validation

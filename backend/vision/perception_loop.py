@@ -29,6 +29,7 @@ class PerceptionLoop:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._last_pub: dict = {}
+        self._lost: set = set()
         self._errors = 0
 
     def start(self) -> None:
@@ -65,12 +66,14 @@ class PerceptionLoop:
                     z = max(getattr(self.drone.get_state(), "z", 1.0) or 1.0, 0.4)
                 result = self.perception.process_frame(frame, z_altitude=z)
                 if self.event_bus:
-                    for label in getattr(result, "lost_labels", []) or []:
+                    lost_now = set(getattr(result, "lost_labels", []) or [])
+                    for label in lost_now - self._lost:
                         self.event_bus.publish(
                             EVENT_TARGET_LOST,
                             {"label": label, "actionable": False},
                         )
                         self._last_pub.pop(label, None)
+                    self._lost = lost_now
                     for obj in result.objects:
                         if not getattr(obj, "actionable", True):
                             continue
@@ -78,8 +81,13 @@ class PerceptionLoop:
                             continue
                         key = obj.label
                         prev = self._last_pub.get(key)
-                        now = (obj.world_x, obj.world_y)
-                        if prev is None or abs(prev[0] - now[0]) > 0.02 or abs(prev[1] - now[1]) > 0.02:
+                        now = (obj.world_x, obj.world_y, time.time())
+                        # Publish on movement, and at a slow heartbeat while
+                        # still: the replan logic confirms a drift over
+                        # several reports, so a single clean jump followed
+                        # by silence would never be confirmed.
+                        if (prev is None or abs(prev[0] - now[0]) > 0.02 or abs(prev[1] - now[1]) > 0.02
+                                or now[2] - prev[2] > 0.4):
                             self.event_bus.publish(EVENT_OBJECT_DETECTED, obj.model_dump())
                             self._last_pub[key] = now
                 self._errors = 0

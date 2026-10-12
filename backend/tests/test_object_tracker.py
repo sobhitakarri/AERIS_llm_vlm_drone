@@ -150,7 +150,7 @@ def test_negative_appearance_score_does_not_crash_the_loop():
     anti-correlates with the template, which is precisely the suspect frame this
     score flags. DetectedObject.confidence is bounded ge=0, so the raw score
     used to raise a ValidationError out of process_frame and kill perception.
-    Seen live in PySimverse at score -0.21."""
+    Seen live at score -0.21."""
     tr = ObjectTracker(label="widget")
     tr.start(scene(120, 120), box_at(120, 120))
     tr._template_score = lambda _frame, _bbox: -0.21
@@ -334,7 +334,8 @@ def test_stale_state_cannot_reenter_perception_after_loss():
 
 
 def test_executor_holds_when_target_lost():
-    """FIND must hover, not fly to the last known world coordinate."""
+    """FIND on a lost target must not fly to the last known world coordinate:
+    the step fails and the mission ends with a controlled landing in place."""
     drone = SimInterface()
     drone.connect()
     sm = StateManager()
@@ -352,10 +353,12 @@ def test_executor_holds_when_target_lost():
             SkillPrimitive(skill="LAND", params={}),
         ],
     )
-    assert executor.execute_plan(plan) is True
+    assert executor.execute_plan(plan) is False
+    assert "not found" in executor.last_error
     st = drone.get_state()
     assert abs(st.x) < 0.2
     assert abs(st.y) < 0.2
+    assert st.z == 0.0 and not st.is_armed
 
 
 def test_state_manager_lost_object_is_not_in_llm_context():

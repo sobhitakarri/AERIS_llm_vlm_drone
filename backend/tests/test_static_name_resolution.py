@@ -15,7 +15,7 @@ import pytest
 
 BACKEND = Path(__file__).resolve().parents[1]
 
-SKIP = {"backend.tests", "backend.drone.matlab_interface"}
+SKIP = {"backend.tests"}
 
 
 def _module_names() -> list[str]:
