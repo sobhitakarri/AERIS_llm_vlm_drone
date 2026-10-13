@@ -216,10 +216,11 @@ classdef Sensors < matlab.System
             obj.v = zeros(3, 1);
             obj.ba = zeros(2, 1);
             obj.terrain = 0;
-            % Turn-on biases: fixed fractions of the datasheet bound so a
-            % run is repeatable; the bias walk adds the stochastic part.
-            obj.gyroBias = S.gyro_bias * [0.6; -0.4; 0.3];
-            obj.accelBias = S.accel_bias * [0.5; -0.3; 0.4];
+            % Turn-on biases: fractions of the datasheet bound. The default
+            % fractions are fixed so a run is repeatable; a Monte Carlo study
+            % draws them from [-1, 1] (S.bias_frac, rows: gyro, accel).
+            obj.gyroBias = S.gyro_bias * S.bias_frac(1, :).';
+            obj.accelBias = S.accel_bias * S.bias_frac(2, :).';
             obj.k = 0;
             obj.range = 0;
             obj.init = false;

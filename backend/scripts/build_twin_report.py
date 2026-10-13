@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+MET_SUMMARY = REPO_ROOT / "reports" / "twin_results" / "metrics" / "experiments_summary.json"
 OUT = REPO_ROOT / "reports" / "twin_results"
 VAL = REPO_ROOT / "cache" / "twin_validation"
 
@@ -290,6 +291,32 @@ def main() -> int:
     shots = sorted((OUT / "images").glob("dashboard*.png"))
     if shots:
         md += ["## 6. Ground station", ""] + [f"![{s.stem}](images/{s.name})\n" for s in shots]
+
+    # ------------------------------------------------------------ experiments
+    summ = MET_SUMMARY.read_text(encoding="utf-8") if MET_SUMMARY.is_file() else None
+    figs = REPO_ROOT / "reports" / "thesis" / "figures"
+    exp_figs = [("fig_steps_truth.png", "Step responses, true-state feedback, against the linear model of the controller"),
+                ("fig_steps_onboard.png", "Step responses with the onboard estimator"),
+                ("fig_gust.png", "Wind-gust sweep"), ("fig_mass.png", "Mass sweep (thrust-to-weight, hover throttle, tracking)"),
+                ("fig_drift.png", "Dead-reckoning drift without camera fixes, and the gate of the camera fix"),
+                ("fig_mc.png", "Monte Carlo of the validation flight over sensor turn-on biases")]
+    present = [(n, c) for n, c in exp_figs if (figs / n).is_file()]
+    if summ and present:
+        import json as _json
+        mac = _json.loads(summ)
+        (OUT / "images" / "experiments").mkdir(exist_ok=True)
+        md += ["## 7. Experiments on the plant", "",
+               "`matlab/twin/experiments_aeris_twin.m` flies the plant alone (no Python, no model) with one factor varied at a time; "
+               "`reports/thesis/make_thesis_figures.py` turns the logged signals into the figures and numbers below and into the "
+               "thesis. Data: [metrics/experiments](metrics/experiments).", ""]
+        for n, c in present:
+            shutil.copyfile(figs / n, OUT / "images" / "experiments" / n)
+            md += [f"**{c}**", "", f"![{c}](images/experiments/{n})", ""]
+        pick = [("StepModelRmsZ", "Linear model vs measured height step (RMS, cm)"), ("StepModelRmsX", "Linear model vs measured x step (RMS, cm)"),
+                ("DriftN", "Drift runs"), ("DriftSlopeMean", "Dead-reckoning slope, mean (cm per metre)"),
+                ("DriftYawAbsMean", "Heading drift, mean absolute (deg per minute)"), ("McN", "Monte Carlo runs"),
+                ("McRmseMean", "Tracking RMSE, mean (cm)"), ("McWpMax", "Worst arrival error (cm)"), ("McEstMax", "Worst estimator RMSE (cm)")]
+        md += ["| Quantity | Value |", "|---|---|"] + [f"| {lab} | {mac[k]} |" for k, lab in pick if k in mac] + [""]
 
     notes = OUT / "NOTES.md"
     if notes.is_file():

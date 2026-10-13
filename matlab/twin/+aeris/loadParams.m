@@ -87,6 +87,7 @@ T.sens.flow_div = round(A.sensors.imu_rate_hz / s.flow_rate_hz);
 T.sens.flow_sigma = s.flow_sigma_m_s_per_m;
 T.sens.flow_min_h = s.flow_min_height_m;
 T.sens.seed = 20261012;
+T.sens.bias_frac = [0.6 -0.4 0.3; 0.5 -0.3 0.4];   % turn-on bias as a fraction of the bound: gyro, accel
 
 % Estimator: Mahony attitude filter + fixed-gain position/velocity observers.
 T.est.mode = 1;                 % 1 = onboard estimator, 0 = ground-truth passthrough
