@@ -1,6 +1,6 @@
 # AERIS digital twin: results and metrics
 
-Generated 2026-10-12 17:26 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
+Generated 2026-10-13 14:01 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
 
 ## 1. Unit tests
 
@@ -222,7 +222,47 @@ Preview above; full video: [videos/case09_replan_moved_target.mp4](videos/case09
 
 ![dashboard_mission](images/dashboard_mission.png)
 
-## 7. How this run was made, and what it found
+## 7. Experiments on the plant
+
+`matlab/twin/experiments_aeris_twin.m` flies the plant alone (no Python, no model) with one factor varied at a time; `reports/thesis/make_thesis_figures.py` turns the logged signals into the figures and numbers below and into the thesis. Data: [metrics/experiments](metrics/experiments).
+
+**Step responses, true-state feedback, against the linear model of the controller**
+
+![Step responses, true-state feedback, against the linear model of the controller](images/experiments/fig_steps_truth.png)
+
+**Step responses with the onboard estimator**
+
+![Step responses with the onboard estimator](images/experiments/fig_steps_onboard.png)
+
+**Wind-gust sweep**
+
+![Wind-gust sweep](images/experiments/fig_gust.png)
+
+**Mass sweep (thrust-to-weight, hover throttle, tracking)**
+
+![Mass sweep (thrust-to-weight, hover throttle, tracking)](images/experiments/fig_mass.png)
+
+**Dead-reckoning drift without camera fixes, and the gate of the camera fix**
+
+![Dead-reckoning drift without camera fixes, and the gate of the camera fix](images/experiments/fig_drift.png)
+
+**Monte Carlo of the validation flight over sensor turn-on biases**
+
+![Monte Carlo of the validation flight over sensor turn-on biases](images/experiments/fig_mc.png)
+
+| Quantity | Value |
+|---|---|
+| Linear model vs measured height step (RMS, cm) | 0.7 |
+| Linear model vs measured x step (RMS, cm) | 1.1 |
+| Drift runs | 8 |
+| Dead-reckoning slope, mean (cm per metre) | 0.15 |
+| Heading drift, mean absolute (deg per minute) | 0.08 |
+| Monte Carlo runs | 8 |
+| Tracking RMSE, mean (cm) | 4.8 |
+| Worst arrival error (cm) | 3.6 |
+| Worst estimator RMSE (cm) | 2.3 |
+
+## 8. How this run was made, and what it found
 
 All runs: 12 October 2026, LiteWing airframe, `scene_lab`, twin with rendering
 on an RTX 3050 laptop (about 0.6-0.7x real time). Videos are time-lapses of

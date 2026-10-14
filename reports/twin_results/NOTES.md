@@ -1,4 +1,4 @@
-## 7. How this run was made, and what it found
+## 8. How this run was made, and what it found
 
 All runs: 12 October 2026, LiteWing airframe, `scene_lab`, twin with rendering
 on an RTX 3050 laptop (about 0.6-0.7x real time). Videos are time-lapses of
