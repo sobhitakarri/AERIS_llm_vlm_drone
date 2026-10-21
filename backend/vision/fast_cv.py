@@ -11,6 +11,7 @@ from backend.schemas.perception import BoundingBox, DetectedObject, PerceptionRe
 from backend.vision.object_tracker import TargetLock, TrackerManager, TrackStatus
 from backend.vision.spatial_grounding import SpatialGrounding
 from backend.runtime.state_manager import StateManager
+from backend.core import run_mode, trace
 from backend.core.logger import get_logger
 
 logger = get_logger("FastPerception")
@@ -79,7 +80,7 @@ class FastPerception:
         """Fill in world coordinates. Returns None when a depth camera shows
         there is no physical object under the box."""
         if getattr(self.grounding, "calibrated", False):
-            x, y, top_z, match = self.grounding.ground_bbox(det.bbox, img_w, img_h)
+            x, y, top_z, match = self.grounding.ground_bbox(det.bbox, img_w, img_h, verify=self._depth_verified())
             if x is None:
                 self.rejected_ungrounded += 1
                 return None
@@ -141,7 +142,7 @@ class FastPerception:
         out: List[DetectedObject] = []
         lost: List[str] = []
 
-        depth_mode = bool(getattr(self.grounding, "has_depth", False))
+        depth_mode = self._depth_verified()
         for label in targets:
             tracker = self.trackers.get(label)
 
@@ -257,7 +258,7 @@ class FastPerception:
                 self.trackers.note_detection_missed(label)
                 return None
             self._pending.pop(label, None)
-            if getattr(self.grounding, "has_depth", False):
+            if self._depth_verified():
                 self._geo[label] = (grounded.world_x, grounded.world_y, grounded.top_z or 0.0)
                 self.trackers.declare_tracking(label)
             else:
@@ -300,11 +301,16 @@ class FastPerception:
         logger.info("Perception targets set to %s", self.active_targets)
 
     def _can_detect(self) -> bool:
-        return bool(self.vlm) and hasattr(self.vlm, "resolve_target")
+        return bool(self.vlm) and hasattr(self.vlm, "resolve_target") and run_mode.current().use_vlm
+
+    def _depth_verified(self) -> bool:
+        """Boxes are checked against the depth map unless the run mode turns it off."""
+        return bool(getattr(self.grounding, "has_depth", False)) and run_mode.current().depth_check
 
     def _vlm_detect(
         self, frame: np.ndarray, label: str, w: int, h: int
     ) -> Optional[DetectedObject]:
+        t0 = time.perf_counter()
         try:
             import cv2
             ok, enc = cv2.imencode(".jpg", frame)
@@ -315,7 +321,10 @@ class FastPerception:
             )
         except Exception as exc:
             logger.warning("VLM detection failed for '%s': %s", label, exc)
+            trace.model_call("vlm", self.vlm, time.perf_counter() - t0, False, target=label, error=str(exc)[:300])
             return None
+        trace.model_call("vlm", self.vlm, time.perf_counter() - t0, det is not None and bool(det.bbox), target=label,
+                         bbox=det.bbox.model_dump() if det is not None and det.bbox else None)
         if det is None or not det.bbox:
             return None
         det.label = label
@@ -344,8 +353,9 @@ class FastPerception:
                 live, lost = self._track_and_detect(frame, wanted, z_altitude)
             objects.extend(live)
 
-        # 2. No VLM configured: fall back to the colour heuristic.
-        if not objects and frame is not None and not self._can_detect():
+        # 2. No VLM configured: fall back to the colour heuristic. Not when a
+        # run mode switched the VLM off: that baseline has no perception at all.
+        if not objects and frame is not None and not self._can_detect() and run_mode.current().use_vlm:
             objects.extend(self._color_track(frame, targets, z_altitude))
 
         # 3. Only actionable objects. Last-known coordinates after TARGET_LOST

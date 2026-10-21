@@ -122,6 +122,53 @@ The benchmark compares where the vehicle truly was while hovering with where
 the referenced object truly is. Ground truth comes from the twin and is used
 for scoring only.
 
+### Baselines and ablations
+
+Every command can name a run mode (`mode` in the `/api/command` body, or
+`AERIS_RUN_MODE` for the default); each one switches components off in the
+same backend:
+
+| Mode | What is different |
+|---|---|
+| `full` | nothing: the closed-loop system |
+| `scripted` | B0: flies waypoints sent with the command; no models, no perception |
+| `open_loop` | B3: plans once with the LLM/VLM, then flies without tracking or replanning |
+| `no_vlm` | B1: the LLM plans from a prior object map sent with the command |
+| `no_depth_check` | VLM boxes grounded by floor projection, without depth verification |
+| `no_replan` | tracking on, but target drift never changes the plan |
+| `safety_shadow` | validator verdict recorded but not enforced (twin and sim only) |
+
+The benchmark runs the matrix and writes one row per trial to
+`reports/twin_results/metrics/trials.csv`:
+
+```bash
+py -3 backend/scripts/run_twin_benchmark.py --modes full open_loop scripted no_replan \
+    --disturbances none move_target remove_target delay_250 --seeds 10 --randomize --paraphrase
+```
+
+A seed fixes the layout, wording and disturbance for every mode, so modes are
+compared on identical trials. The plan cache stays on: plans built from a
+live detection are never cached, so object missions call the VLM every
+trial, and each row's `cache_hit` marks text plans the cache answered.
+Statistics for one or more trial CSVs (success rates with Wilson 95%
+intervals, median [IQR] errors and latencies, paired exact McNemar tests
+against `full`, and a safety table) go to `metrics/analysis.md`:
+
+```bash
+py -3 backend/scripts/analyze_trials.py                      # reports/twin_results/metrics/trials.csv
+py -3 backend/scripts/analyze_trials.py lab.csv distractor.csv --by-scenario
+```
+
+Wrong-object grounding is tested in `scene_distractor`, which is `scene_lab`
+plus a green bottle on the workbench and a red box on the floor. Start the
+twin with `run_aeris_twin('litewing', 'scene_distractor')`; the benchmark
+then runs scenarios 20 to 23 and the ones whose answer is unchanged, and
+records `wrong_object` when the vehicle went to the look-alike.
+
+Each mission's trace (mode, planner, every model call with its model
+ID, latency and raw output, stage timings, steps, replans, lost targets) is at
+`/api/trace` and is appended to `cache/traces/traces.jsonl`.
+
 ## Layout
 
 | Path | What it holds |
@@ -145,4 +192,5 @@ for scoring only.
   stack. The twin's propulsion constants are scaled from published Crazyflie
   data and are not yet identified on the real airframe.
 * The Gemini free tier allows about 20 requests per model per day; a
-  benchmark run uses about ten.
+  benchmark run uses about ten. Object missions need a VLM request per
+  trial, so a large evaluation matrix needs a paid tier or the local models.

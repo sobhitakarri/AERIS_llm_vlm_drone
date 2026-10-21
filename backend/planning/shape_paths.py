@@ -126,14 +126,18 @@ def clip_skills_to_workspace(skills: List[SkillPrimitive], workspace) -> List[Sk
     xmin, xmax = workspace.x_min + pad, workspace.x_max - pad
     ymin, ymax = workspace.y_min + pad, workspace.y_max - pad
     zmin, zmax = workspace.z_min, workspace.z_max
+    from backend.core import trace
     for skill in skills:
         p = skill.params
-        if "x" in p:
-            p["x"] = max(xmin, min(float(p["x"]), xmax))
-        if "y" in p:
-            p["y"] = max(ymin, min(float(p["y"]), ymax))
-        if "z" in p:
-            p["z"] = max(zmin, min(float(p["z"]), zmax))
+        for key, lo, hi in (("x", xmin, xmax), ("y", ymin, ymax), ("z", zmin, zmax)):
+            if key not in p:
+                continue
+            want = float(p[key])
+            p[key] = max(lo, min(want, hi))
+            # The validator only ever sees the clipped plan, so a request
+            # outside the envelope is recorded here or nowhere.
+            if p[key] != want and abs(p[key] - want) > 1e-6:
+                trace.event("workspace_clip", skill=skill.skill, param=key, requested=round(want, 3), clipped=round(p[key], 3))
     return skills
 
 

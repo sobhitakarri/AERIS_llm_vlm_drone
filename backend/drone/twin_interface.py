@@ -13,6 +13,7 @@ path reads them.
 """
 import json
 import math
+import queue
 import socket
 import struct
 import subprocess
@@ -78,6 +79,11 @@ class TwinInterface(DroneInterface):
         self._recv_sock: Optional[socket.socket] = None
         self._proc: Optional[subprocess.Popen] = None
         self._flight_mode = FlightMode.IDLE
+        # Injected command-link latency (communication-delay disturbance).
+        # Flight commands are held this long before they are sent, in order.
+        self.cmd_delay_s = 0.0
+        self._delayed: "queue.Queue" = queue.Queue()
+        self._delay_thread: Optional[threading.Thread] = None
 
     # ------------------------------------------------------------------ setup
     def _camera_ids(self) -> Dict[str, int]:
@@ -186,11 +192,37 @@ class TwinInterface(DroneInterface):
             return False
         try:
             payload = json.dumps({"cmd": command, **kwargs}).encode("utf-8")
+            # Test apparatus (moving objects, restarting) is not on the drone's link.
+            if self.cmd_delay_s > 0 and command not in ("SET_OBJECT", "RESTART", "STOP"):
+                self._delayed.put((time.time() + self.cmd_delay_s, payload))
+                if self._delay_thread is None or not self._delay_thread.is_alive():
+                    self._delay_thread = threading.Thread(target=self._delay_loop, daemon=True, name="twin-link-delay")
+                    self._delay_thread.start()
+                return True
             self._send_sock.sendto(payload, (self.host, self.cmd_port))
             return True
         except OSError as exc:
             logger.error(f"[Twin] Command send failed: {exc}")
             return False
+
+    def set_link_delay(self, ms: float) -> None:
+        self.cmd_delay_s = max(0.0, float(ms) / 1000.0)
+        logger.info(f"[Twin] Command-link delay set to {ms:.0f} ms")
+
+    def _delay_loop(self) -> None:
+        # FIFO with one fixed delay keeps commands in the order they were sent.
+        while self._running or not self._delayed.empty():
+            try:
+                due, payload = self._delayed.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            wait = due - time.time()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                self._send_sock.sendto(payload, (self.host, self.cmd_port))
+            except (OSError, AttributeError) as exc:
+                logger.error(f"[Twin] Delayed command send failed: {exc}")
 
     # ---------------------------------------------------------------- cameras
     def _camera_loop(self) -> None:

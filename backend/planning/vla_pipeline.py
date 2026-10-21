@@ -23,6 +23,7 @@ from backend.schemas.capabilities import RobotCapabilities
 from backend.schemas.perception import DetectedObject
 from backend.planning.safety_validator import SafetyValidator
 from backend.planning.shape_paths import clip_skills_to_workspace
+from backend.core import trace
 from backend.core.logger import get_logger
 
 logger = get_logger("UAV-VLA")
@@ -286,15 +287,22 @@ class UAVVLAPipeline:
                                reasoning="Could not work out which object the command refers to.")
 
         z = goal.target_altitude or _DEFAULT_ALTITUDE_M
-        det = self.object_search.search_and_ground(camera_frame, goal.target_object, z)
+        with trace.stage("object_search"):
+            det = self.object_search.search_and_ground(camera_frame, goal.target_object, z)
         tried = [goal.target_object]
         if det is None and goal.fallback_object:
             tried.append(goal.fallback_object)
-            det = self.object_search.search_and_ground(camera_frame, goal.fallback_object, z)
+            with trace.stage("object_search"):
+                det = self.object_search.search_and_ground(camera_frame, goal.fallback_object, z)
+        trace.set_planner(goal_task=goal.task_type, goal_target=goal.target_object, goal_fallback=goal.fallback_object,
+                          searched=tried, grounded=det.label if det is not None else None,
+                          grounding=det.grounding if det is not None else None,
+                          grounded_xy=[det.world_x, det.world_y] if det is not None else None)
         if det is None:
             why = "no camera frame" if camera_frame is None else "not found in the camera view, or nothing physical is at the detected location"
             return MissionPlan(
                 raw_command=raw_command, source="uav-vla", pipeline=stages, skills=[],
                 reasoning=f"Target {' / '.join(repr(t) for t in tried)}: {why}. No plan generated.",
             )
-        return self.actions_generator.generate_actions(goal, det, capabilities, pose)
+        with trace.stage("actions"):
+            return self.actions_generator.generate_actions(goal, det, capabilities, pose)

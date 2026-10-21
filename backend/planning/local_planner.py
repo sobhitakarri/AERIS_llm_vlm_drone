@@ -7,6 +7,11 @@ from backend.planning.intent_router import ParsedIntent, parse_intent
 from backend.planning.shape_paths import closed_move_skills, parse_shape_name, shape_corners
 from backend.schemas.mission import SkillPrimitive
 
+# Cruise height when the command names none and the vehicle is on the ground
+# (the UAV-VLA pipeline uses the same). Holding the current height there would
+# mean flying at the floor limit, under anything taller than about 0.25 m.
+_DEFAULT_ALTITUDE_M = 0.6
+
 
 def local_plan(command: str, context: Dict[str, Any] | None = None) -> List[SkillPrimitive]:
     intent = parse_intent(command, context)
@@ -16,8 +21,15 @@ def local_plan(command: str, context: Dict[str, Any] | None = None) -> List[Skil
 def plan_from_intent(intent: ParsedIntent, context: Dict[str, Any] | None = None) -> List[SkillPrimitive]:
     ctx = context or {}
     pose = ctx.get("pose") or {}
-    z = float(intent.slots.get("z", pose.get("z", 0.5)))
-    z = max(0.2, min(1.5, z))
+    if "z" in intent.slots:
+        want = float(intent.slots["z"])
+    else:
+        here = float(pose.get("z", 0.0) or 0.0)
+        want = here if here > 0.2 else _DEFAULT_ALTITUDE_M
+    z = max(0.2, min(1.5, want))
+    if z != want and "z" in intent.slots:
+        from backend.core import trace
+        trace.event("workspace_clip", skill="code-planner", param="z", requested=round(want, 3), clipped=z)
     hover_t = float(intent.slots.get("t", 2.0))
 
     if intent.intent == "takeoff":

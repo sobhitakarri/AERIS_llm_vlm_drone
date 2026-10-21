@@ -25,6 +25,11 @@ logger = get_logger("MissionExecutor")
 
 _FIND_TIMEOUT_S = 25.0       # how long FIND waits for the perception stack to lock on
 _DEFAULT_SPEED = 0.4
+_REACQUIRE_S = 4.0           # hold this long for a lost target to be found again before giving up
+# A lost target counts as found again only this close to where it was last
+# trusted. Found in the twin: asked again for "red bottle" after the bottle
+# was removed, the VLM boxed the red fire extinguisher 4.6 m away.
+_REACQUIRE_RADIUS_M = 0.6
 
 
 class MissionExecutor:
@@ -63,6 +68,79 @@ class MissionExecutor:
         self._lock = threading.Lock()
         self._pending_replan: Optional[List] = None
         self._busy = False
+        # The object the current mission's steps are aimed at, when the plan
+        # was built from a tracked detection. Its coordinates are fixed in the
+        # plan, so if perception loses it the remaining steps would fly to a
+        # place that is no longer known to hold anything.
+        self.mission_target: Optional[str] = None
+        self._target_xy: Optional[tuple] = None     # last trusted position of the target
+        self._target_lost = threading.Event()
+
+    def set_mission_target(self, label: Optional[str], xy: Optional[tuple] = None) -> None:
+        self.mission_target = label or None
+        self._target_xy = tuple(xy) if (label and xy and None not in xy) else None
+        self._target_lost.clear()
+
+    def update_target_position(self, x: float, y: float) -> None:
+        """An accepted replan moved the target: that is now its trusted position."""
+        if self.mission_target:
+            self._target_xy = (float(x), float(y))
+
+    def _found_where_lost(self) -> bool:
+        if self.state_manager is None or not self.state_manager.is_actionable(self.mission_target):
+            return False
+        if self._target_xy is None:
+            return True
+        obj = self.state_manager.get_object(self.mission_target)
+        d = math.hypot(obj.world_x - self._target_xy[0], obj.world_y - self._target_xy[1])
+        if d > _REACQUIRE_RADIUS_M:
+            from backend.core import trace
+            trace.event("reacquire_rejected", label=self.mission_target, distance_m=round(d, 2),
+                        at=[round(obj.world_x, 3), round(obj.world_y, 3)])
+            return False
+        return True
+
+    def note_target_lost(self, label: str) -> None:
+        """TARGET_LOST from perception. Acted on at the next waypoint or step."""
+        if self.mission_target and label == self.mission_target:
+            self._target_lost.set()
+            logger.warning("Mission target '%s' lost; the remaining target-directed steps are on hold.", label)
+
+    def _target_still_valid(self) -> bool:
+        """False when the mission's target was lost and is not found again within
+        _REACQUIRE_S. Holds position while it waits. A target found again at a
+        new place carries on: target drift is handled by replanning."""
+        if not self._target_lost.is_set():
+            return True
+        from backend.core import trace
+        trace.event("target_hold", label=self.mission_target)
+        clock = self.drone.sim_time if hasattr(self.drone, "sim_time") else time.time
+        deadline = clock() + _REACQUIRE_S
+        wall_deadline = time.time() + 6 * _REACQUIRE_S
+        while clock() < deadline and time.time() < wall_deadline and not self.monitor.aborted():
+            if self._found_where_lost():
+                self._target_lost.clear()
+                trace.event("target_reacquired", label=self.mission_target)
+                logger.info("Mission target '%s' found again; continuing.", self.mission_target)
+                return True
+            self.drone.hover(0.5)
+        self.last_error = f"Target '{self.mission_target}' was lost and not found again; mission stopped."
+        trace.event("target_lost_abort", label=self.mission_target)
+        logger.warning(self.last_error)
+        return False
+
+    def _stop_for_lost_target(self) -> None:
+        """Leave the target area and land on the home pad (not where the target
+        was: that may be a table top)."""
+        self.set_mission_target(None)          # the flight home is not target-directed
+        try:
+            st = self.drone.get_state()
+            hx, hy = self.drone.home_position()
+            if self._fly_to(hx, hy, max(st.z, self._z_limits()[0] + 0.3)) and self.drone.land():
+                return
+        except Exception as exc:
+            logger.warning("Return after a lost target failed: %s", exc)
+        self._safe_abort_flight()
 
     def inject_replan(self, skills: List) -> None:
         with self._lock:
@@ -102,6 +180,7 @@ class MissionExecutor:
         try:
             return self._run(plan, on_step_complete)
         finally:
+            self.set_mission_target(None)
             with self._lock:
                 self._busy = False
 
@@ -158,6 +237,8 @@ class MissionExecutor:
         self.last_route = [start] + list(waypoints)
         for wp in waypoints:
             if self.monitor.aborted():
+                return False
+            if not self._target_still_valid():
                 return False
             if not self.drone.move_to(wp[0], wp[1], wp[2], speed):
                 self.last_error = f"Could not reach waypoint ({wp[0]:.2f}, {wp[1]:.2f}, {wp[2]:.2f})."
@@ -296,6 +377,18 @@ class MissionExecutor:
                 return obj.world_x, obj.world_y, obj.world_z or self.drone.get_state().z
         return None
 
+    def _end_for_lost_target(self, i: int, skill: str) -> bool:
+        if not self.last_error:
+            self.last_error = f"Target '{self.mission_target}' was lost; mission stopped."
+        logger.error(f"Mission stopped at step {i + 1} ({skill}): {self.last_error}")
+        self._stop_for_lost_target()
+        self.monitor.finish(False)
+        if self.event_bus:
+            self.event_bus.publish(EVENT_MISSION_FINISHED, {
+                "success": False, "step": i + 1, "skill": skill, "error": self.last_error, "reason": "target_lost",
+            })
+        return False
+
     # --------------------------------------------------------------- main loop
     def _run(self, plan: MissionPlan, on_step_complete: Optional[Callable[[str], None]] = None) -> bool:
         logger.info(f"Executing mission plan with {len(plan.skills)} steps...")
@@ -316,6 +409,12 @@ class MissionExecutor:
             skill = item.skill.upper()
             params = item.params or {}
             self.monitor.note_step(i + 1, skill)
+
+            # A lost target ends the target-directed part of the mission
+            # (a final LAND is not target-directed and still runs).
+            lost_target = self.mission_target if skill != "LAND" else None
+            if lost_target and not self._target_still_valid():
+                return self._end_for_lost_target(i, skill)
             logger.info(f"Executing step {i+1}/{len(queue)}: {skill} with params={params}")
 
             if self.event_bus:
@@ -344,6 +443,8 @@ class MissionExecutor:
             else:
                 logger.error(f"Unhandled skill '{skill}' — not in the executor dispatch table.")
 
+            if not success and self.mission_target and self._target_lost.is_set():
+                return self._end_for_lost_target(i, skill)     # stopped mid-leg by the loss
             if not success:
                 if not self.last_error:
                     self.last_error = f"{skill} failed at step {i + 1}."

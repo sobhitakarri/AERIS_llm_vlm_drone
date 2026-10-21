@@ -51,7 +51,57 @@ def test_no_visual_prompt_yields_a_plan_without_perception(prompt):
     assert plan.skills == []
 
 
+def test_twin_benchmark_covers_these_prompts_with_real_targets():
+    import json
+    from pathlib import Path
+    from backend.scripts.run_twin_benchmark import SCENARIOS
+
+    config = Path(__file__).resolve().parents[2] / "matlab" / "twin" / "config"
+    scenes = {name: {o["name"] for o in json.loads((config / f"{name}.json").read_text(encoding="utf-8"))["objects"]}
+              for name in ("scene_lab", "scene_distractor")}
+    ids = [s["id"] for s in SCENARIOS]
+    assert len(ids) == len(set(ids)) and 9 not in ids          # 9 is the replan test
+    assert set(VISUAL_PROMPTS + SHAPE_PROMPTS) <= {s["prompt"] for s in SCENARIOS}
+    for s in SCENARIOS:
+        for scene in s.get("scenes", scenes):
+            names = scenes[scene]
+            expect = s.get("expect") or []
+            if isinstance(expect, str):
+                assert expect in names, (s["id"], scene, expect)
+            elif expect:
+                assert set(expect) & names, (s["id"], scene)
+            if s.get("avoid") and s.get("scenes"):
+                assert s["avoid"] in names, (s["id"], scene)
+
+
+def test_distractor_scene_only_adds_look_alikes():
+    import json
+    import math
+    from pathlib import Path
+
+    config = Path(__file__).resolve().parents[2] / "matlab" / "twin" / "config"
+    lab = {o["name"]: o for o in json.loads((config / "scene_lab.json").read_text(encoding="utf-8"))["objects"]}
+    dis = {o["name"]: o for o in json.loads((config / "scene_distractor.json").read_text(encoding="utf-8"))["objects"]}
+    assert set(dis) - set(lab) == {"green_bottle", "red_box"}
+    assert all(dis[n] == lab[n] for n in lab)
+    # Scenario 22's answer: the green bottle is the one next to the laptop.
+    lap = dis["laptop"]["pos"]
+    d = {n: math.hypot(dis[n]["pos"][0] - lap[0], dis[n]["pos"][1] - lap[1]) for n in ("green_bottle", "red_bottle")}
+    assert d["green_bottle"] < 0.5 < d["red_bottle"]
+
+
 def test_code_planner_defers_visual_targets_to_run_time():
     skills = plan_from_intent(parse_intent("find the red bottle"))
     assert [s.skill for s in skills] == ["TAKEOFF", "FIND"]
     assert not {"x", "y"} & set(skills[1].params)
+
+
+def test_shape_without_altitude_flies_at_cruise_height_from_the_ground():
+    """Found in the recorded run of case 17: from the pad the star was planned
+    at the floor limit (0.25 m) and ran into the 0.23 m crate."""
+    on_pad = {"pose": {"x": -1.8, "y": -1.4, "z": 0.0}}
+    skills = plan_from_intent(parse_intent("Fly in a star pattern", on_pad), on_pad)
+    assert {s.params["z"] for s in skills if s.skill in ("TAKEOFF", "MOVE_TO")} == {0.6}
+    airborne = {"pose": {"x": 0.0, "y": 0.0, "z": 1.1}}
+    skills = plan_from_intent(parse_intent("Fly in a star pattern", airborne), airborne)
+    assert all(s.params["z"] == 1.1 for s in skills if s.skill == "MOVE_TO")

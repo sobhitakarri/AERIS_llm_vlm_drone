@@ -1,6 +1,6 @@
 # AERIS digital twin: results and metrics
 
-Generated 2026-10-13 14:01 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
+Generated 2026-10-21 12:04 by `backend/scripts/build_twin_report.py` from the files in `metrics/` and `logs/`. Every number below was written by a test run; nothing is typed in by hand.
 
 ## 1. Unit tests
 
@@ -75,7 +75,7 @@ Preview above; full video: [videos/case00_link_smoke_flight.mp4](videos/case00_l
 
 `py -3 backend/scripts/run_twin_benchmark.py --record` sends each prompt to the running backend. A case passes when the vehicle's true position while hovering is within 15 cm of where the prompt asks it to be relative to the object's true position (and within 15 degrees of facing it, for inspection cases). Ground truth is used for scoring only; the planner and the perception stack never see it.
 
-Run 2026-10-12 16:06:24, airframe LiteWing ESP32-S3, scene scene_lab, model gemini-robotics-er-2-preview: **8/8 passed**. Each case has one scored flight. Cases 1, 2 were re-run; section 7 says why.
+Run 2026-10-21 11:41:20, airframe LiteWing ESP32-S3, scene scene_lab, model gemini-3.6-flash: **16/16 passed**. Each case has one scored flight. Cases 1, 2, 10, 11, 12, 13, 14, 15, 16, 17 were re-run; section 7 says why.
 
 Log: [logs/04_language_missions.log](logs/04_language_missions.log), data: [metrics/benchmark.json](metrics/benchmark.json), [metrics/benchmark.csv](metrics/benchmark.csv)
 
@@ -89,6 +89,14 @@ Log: [logs/04_language_missions.log](logs/04_language_missions.log), data: [metr
 | 6 | Find the traffic cone and hover facing it | done | yes | - | 2.9 | 0.1 | 4.4 | - | 10.0 | 2.89 | 6.2 | 0 | - |
 | 7 | Take off to 0.8 m and fly in a square | done | yes | - | - | - | - | - | 23.0 | 8.17 | 0.1 | 0 | - |
 | 8 | Find the purple elephant and hover above it | refused | yes | - | - | - | - | - | - | - | 3.8 | - | - |
+| 10 | Find cardboard box and hover it | done | yes | 3.1 | - | - | 1.4 | 0.32 | 13.0 | 3.54 | 12.9 | 0 | yes |
+| 11 | Find the shiny red bottle next to the blue cube and hover facing it | done | yes | - | 3.0 | 0.4 | 1.4 | - | 15.0 | 4.63 | 6.5 | 0 | yes |
+| 12 | Find the bottle that is left of the blue cube and inspect it from 0.4 m away | done | yes | - | 2.1 | 0.7 | 1.9 | - | 14.2 | 4.59 | 19.6 | 0 | yes |
+| 13 | Find the red bottle if it is in front of the cube, otherwise look at the cube | done | yes | 49.0 | - | - | 2.4 | - | 14.5 | 4.57 | 14.8 | 0 | yes |
+| 14 | Look at the cylindrical object and hover above its center | done | yes | 3.1 | - | - | 2.5 | 0.30 | 16.1 | 4.63 | 20.5 | 0 | yes |
+| 15 | Fly 0.5m and make a square in air | done | yes | - | - | - | - | - | 25.5 | 8.17 | 0.0 | 0 | yes |
+| 16 | Hover at the end of the wall | done | yes | 20.0 | - | - | 8.1 | - | 9.3 | 2.74 | 14.0 | 0 | yes |
+| 17 | Fly in a star pattern | done | yes | - | - | - | - | - | 33.5 | 9.03 | 0.1 | 0 | yes |
 
 ![Errors per case](images/benchmark_errors.png)
 
@@ -201,6 +209,118 @@ Result: **PASS** (refused). Plan: none.
 Preview above; full video: [videos/case08_find_the_purple_elephant_and_hover.mp4](videos/case08_find_the_purple_elephant_and_hover.mp4)
 
 ![Case 8 still](images/case08_find_the_purple_elephant_and_hover.jpg)
+
+### Case 10: "Find cardboard box and hover it"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
+
+> Target 'cardboard box' grounded by depth camera at (-1.60, 1.10) m, top 0.38 m. Plan: hover at 0.72 m above it.
+
+[![Case 10](previews/case10_find_cardboard_box_and_hover_it.gif)](videos/case10_find_cardboard_box_and_hover_it.mp4)
+
+Preview above; full video: [videos/case10_find_cardboard_box_and_hover_it.mp4](videos/case10_find_cardboard_box_and_hover_it.mp4)
+
+![Case 10 still](images/case10_find_cardboard_box_and_hover_it.jpg)
+
+![Case 10 path](images/path_case10.png)
+
+### Case 11: "Find the shiny red bottle next to the blue cube and hover facing it"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
+
+> Target 'shiny red bottle next to the blue cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.50 m, heading 41 deg.
+
+[![Case 11](previews/case11_find_the_shiny_red_bottle_next.gif)](videos/case11_find_the_shiny_red_bottle_next.mp4)
+
+Preview above; full video: [videos/case11_find_the_shiny_red_bottle_next.mp4](videos/case11_find_the_shiny_red_bottle_next.mp4)
+
+![Case 11 still](images/case11_find_the_shiny_red_bottle_next.jpg)
+
+![Case 11 path](images/path_case11.png)
+
+### Case 12: "Find the bottle that is left of the blue cube and inspect it from 0.4 m away"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
+
+> Target 'bottle that is left of the blue cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.40 m, heading 41 deg.
+
+[![Case 12](previews/case12_find_the_bottle_that_is_left.gif)](videos/case12_find_the_bottle_that_is_left.mp4)
+
+Preview above; full video: [videos/case12_find_the_bottle_that_is_left.mp4](videos/case12_find_the_bottle_that_is_left.mp4)
+
+![Case 12 still](images/case12_find_the_bottle_that_is_left.jpg)
+
+![Case 12 path](images/path_case12.png)
+
+### Case 13: "Find the red bottle if it is in front of the cube, otherwise look at the cube"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
+
+> Target 'red bottle that is in front of the cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.50 m, heading 41 deg. Condition checked: 'in front of the cube'.
+
+[![Case 13](previews/case13_find_the_red_bottle_if_it.gif)](videos/case13_find_the_red_bottle_if_it.mp4)
+
+Preview above; full video: [videos/case13_find_the_red_bottle_if_it.mp4](videos/case13_find_the_red_bottle_if_it.mp4)
+
+![Case 13 still](images/case13_find_the_red_bottle_if_it.jpg)
+
+![Case 13 path](images/path_case13.png)
+
+### Case 14: "Look at the cylindrical object and hover above its center"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > ROTATE > HOVER.
+
+> Target 'cylindrical object' grounded by depth camera at (1.45, -0.85) m, top 0.59 m. Plan: hover at 0.94 m above it.
+
+[![Case 14](previews/case14_look_at_the_cylindrical_object_and.gif)](videos/case14_look_at_the_cylindrical_object_and.mp4)
+
+Preview above; full video: [videos/case14_look_at_the_cylindrical_object_and.mp4](videos/case14_look_at_the_cylindrical_object_and.mp4)
+
+![Case 14 still](images/case14_look_at_the_cylindrical_object_and.jpg)
+
+![Case 14 path](images/path_case14.png)
+
+### Case 15: "Fly 0.5m and make a square in air"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO.
+
+> [CODE] intent=shape | NeLV parser→route→path→control
+
+[![Case 15](previews/case15_fly_0_5m_and_make_a.gif)](videos/case15_fly_0_5m_and_make_a.mp4)
+
+Preview above; full video: [videos/case15_fly_0_5m_and_make_a.mp4](videos/case15_fly_0_5m_and_make_a.mp4)
+
+![Case 15 still](images/case15_fly_0_5m_and_make_a.jpg)
+
+![Case 15 path](images/path_case15.png)
+
+### Case 16: "Hover at the end of the wall"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > HOVER.
+
+> Target 'end of the wall' grounded by depth camera at (-0.45, -1.34) m, top 1.20 m. Plan: hover at 1.54 m above it.
+
+[![Case 16](previews/case16_hover_at_the_end_of_the.gif)](videos/case16_hover_at_the_end_of_the.mp4)
+
+Preview above; full video: [videos/case16_hover_at_the_end_of_the.mp4](videos/case16_hover_at_the_end_of_the.mp4)
+
+![Case 16 still](images/case16_hover_at_the_end_of_the.jpg)
+
+![Case 16 path](images/path_case16.png)
+
+### Case 17: "Fly in a star pattern"
+
+Result: **PASS** (done). Plan: TAKEOFF > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO > MOVE_TO.
+
+> [CODE] intent=shape | NeLV parser→route→path→control
+
+[![Case 17](previews/case17_fly_in_a_star_pattern.gif)](videos/case17_fly_in_a_star_pattern.mp4)
+
+Preview above; full video: [videos/case17_fly_in_a_star_pattern.mp4](videos/case17_fly_in_a_star_pattern.mp4)
+
+![Case 17 still](images/case17_fly_in_a_star_pattern.jpg)
+
+![Case 17 path](images/path_case17.png)
 
 ## 5. Replanning when the target moves
 
@@ -323,4 +443,27 @@ Unit tests for these are in `backend/tests/test_live_run_fixes.py`.
   Qwen2-VL detection did not finish within 60 s on this PC.
 * The dashboard screenshot was taken by a headless browser, which is why its
   simulation-speed chip reads x0.00.
+
+## 9. Cases 10-17: harder wording, 21 October 2026
+
+Same airframe and scene (`scene_lab`), model `gemini-3.6-flash`, run mode `full`, one scored
+flight per case. 8/8 after one re-run. Log: `logs/06_new_language_missions.log`; per-trial data
+with stage timings and model calls: `metrics/trials_cases10-17.csv`.
+
+* Case 13 ("…if it is in front of the cube, otherwise look at the cube") is scored as "went to the
+  bottle, not the cube". The 49 cm in the table is the 0.5 m viewing distance, not an error.
+* Case 14 ("the cylindrical object") is ambiguous on purpose. The VLM chose the steel drum.
+* Case 16 ("the end of the wall"): the VLM placed the end at (-0.45, -1.34), 19 cm along the wall
+  from the true end at (-0.45, -1.15). It passes against the 30 cm tolerance, narrowly.
+* Case 17 ("Fly in a star pattern") **failed on the first attempt and found a planner fault**. A
+  command with no altitude was planned at the vehicle's current height, which is 0 m on the pad,
+  then clamped to the 0.25 m floor limit. One star vertex lies over the 0.23 m yellow crate; the
+  route planner refused to fly through it and the mission ended with a controlled landing.
+  Fix: from the ground, a command without an altitude now uses the 0.6 m cruise height the
+  UAV-VLA pipeline already used (`backend/planning/local_planner.py`, test in
+  `backend/tests/test_benchmark_scenarios.py`). The re-run passed. First attempt kept as
+  `videos/case17_fly_in_a_star_pattern_attempt1.mp4`, `images/..._attempt1.jpg` and
+  `metrics/benchmark_case17_attempt1_before_altitude_fix.json`.
+
+Wrong-object tests with look-alike objects are in [scene_distractor/](scene_distractor/README.md).
 

@@ -6,15 +6,17 @@ import math
 import time
 from collections import deque
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from backend.schemas.capabilities import RobotCapabilities
+from backend.schemas.mission import MissionPlan, SkillPrimitive
 from backend.schemas.telemetry import TelemetryPacket, DroneState
 from backend.planning.planner import PlannerState
+from backend.core import run_mode, trace
 from backend.core.logger import get_logger
 
 logger = get_logger("APIRoutes")
@@ -57,6 +59,17 @@ def log_event(message: str, level: str = "info") -> None:
 
 class CommandRequest(BaseModel):
     command: str
+    # Evaluation: run mode for this mission (see backend/core/run_mode.py).
+    mode: Optional[str] = None
+    # scripted mode: the waypoints to fly, as Skill DSL steps.
+    skills: Optional[List[Dict[str, Any]]] = None
+    # no_vlm mode: a prior map, [{"label", "x", "y", "z"}], given to the LLM
+    # in place of perception.
+    known_objects: Optional[List[Dict[str, Any]]] = None
+
+
+class LinkDelayRequest(BaseModel):
+    ms: float
 
 
 class ModelConfigRequest(BaseModel):
@@ -445,12 +458,35 @@ async def submit_command(req: CommandRequest):
     if drone is not None and getattr(drone, "is_connected", True) is False:
         return {"success": False, "error": "The drone backend is not connected.", "raw_command": req.command}
 
-    log_event(f'Command: "{req.command}"')
+    try:
+        mode = run_mode.activate(req.mode)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc), "raw_command": req.command}
+    backend = app_context.get("drone_backend", "sim")
+    if not mode.enforce_safety and backend not in run_mode.SHADOW_BACKENDS:
+        run_mode.activate(None)
+        return {"success": False, "error": f"Run mode '{mode.name}' flies unvalidated plans and is only allowed "
+                                            f"on {', '.join(run_mode.SHADOW_BACKENDS)}, not '{backend}'.",
+                "raw_command": req.command}
+    if mode.planner == "scripted" and not req.skills:
+        return {"success": False, "error": "Run mode 'scripted' needs the waypoints as 'skills'.", "raw_command": req.command}
+    vlm = app_context.get("vlm")
+    trace.begin(
+        req.command, mode.name,
+        clock=drone.sim_time if drone is not None and hasattr(drone, "sim_time") else None,
+        drone_backend=backend, model_mode=app_context.get("model_mode"),
+        llm_model=getattr(llm, "model_name", None), vlm_model=getattr(vlm, "model_name", None),
+    )
+    t_plan = time.perf_counter()
+
+    log_event(f'Command: "{req.command}" [{mode.name}]')
     planner.start_mission(req.command)
     context = _pose_context()
 
     from backend.planning.intent_router import parse_intent
-    intent = parse_intent(req.command, context)
+    with trace.stage("intent"):
+        intent = parse_intent(req.command, context)
+    trace.set_planner(intent=intent.intent, intent_use_code=intent.use_code)
     vla = app_context.get("vla")
     perception = app_context.get("perception")
     replan = app_context.get("replan")
@@ -463,26 +499,60 @@ async def submit_command(req: CommandRequest):
     if state_mgr:
         state_mgr.clear_objects()
 
-    if vla and intent.intent == "vision":
-        goal = vla.goal_extractor.extract_goal(req.command)
+    target_label, target_xy = None, None   # set when the plan flies to a tracked detection
+    if mode.planner == "scripted":
+        try:
+            skills = [SkillPrimitive(skill=str(s.get("skill", "")).upper(), params=dict(s.get("params") or {})) for s in req.skills]
+        except Exception as exc:
+            trace.finish(status="refused", reason=f"bad scripted skills: {exc}")
+            return {"success": False, "error": f"Scripted skills are malformed: {exc}", "raw_command": req.command}
+        plan = MissionPlan(raw_command=req.command, reasoning="Scripted waypoints supplied with the command.",
+                           skills=skills, source="scripted", pipeline=["scripted"])
+    elif vla and intent.intent == "vision" and not mode.force_llm:
+        with trace.stage("goal"):
+            goal = vla.goal_extractor.extract_goal(req.command)
         if perception and hasattr(perception, "set_targets"):
             perception.set_targets([])
-        frame = await asyncio.to_thread(_scene_frame)
+        with trace.stage("frame"):
+            frame = await asyncio.to_thread(_scene_frame)
         plan = await asyncio.to_thread(vla.process, req.command, frame, capabilities, context["pose"], goal)
         # Hand the located object to the perception loop, which keeps it
         # tracked for the rest of the mission (and for replanning) without
-        # another model call.
-        if perception and plan.skills and vla.object_search.last_detection is not None:
+        # another model call. Open-loop baselines fly the plan blind instead.
+        if perception and plan.skills and vla.object_search.last_detection is not None and mode.tracking:
             perception.adopt(vla.object_search.last_detection)
+            target_label = vla.object_search.last_detection.label
+            target_xy = (vla.object_search.last_detection.world_x, vla.object_search.last_detection.world_y)
     else:
         if perception and hasattr(perception, "set_targets"):
             perception.set_targets([])
+        if req.known_objects is not None:
+            # A prior map stands in for perception (LLM-only baseline).
+            context["objects"] = list(req.known_objects)
+        t0 = time.perf_counter()
         plan = await asyncio.to_thread(llm.plan, req.command, capabilities, context)
+        dt = time.perf_counter() - t0
+        trace.add_stage("llm_plan", dt)
+        model_ran = plan.source not in ("code", "offline") and not str(plan.source).startswith("cache")
+        if getattr(llm, "last_attempts", None) or model_ran:
+            trace.model_call("llm", llm, dt, bool(plan.skills))
+
+    trace.add_stage("plan_total", time.perf_counter() - t_plan)
+    trace.set_planner(
+        source=plan.source, pipeline=plan.pipeline, reasoning=plan.reasoning,
+        cache_hit=str(plan.source or "").startswith("cache"),
+        # The UAV-VLA goal extractor is rule-based; the model there is the VLM.
+        goal_extractor="rules" if plan.source == "uav-vla" else None,
+        skills=[s.model_dump() for s in plan.skills],
+    )
 
     if not plan.skills:
         planner.state = PlannerState.ERROR
         log_event(f"No plan: {plan.reasoning}", "error")
+        tr = trace.finish(status="refused", reason=plan.reasoning)
         return {
+            "mission_id": (tr or {}).get("id"),
+            "run_mode": mode.name,
             "success": False,
             "error": plan.reasoning or "No plan could be generated for this command.",
             "raw_command": req.command,
@@ -505,10 +575,23 @@ async def submit_command(req: CommandRequest):
     except Exception as e:
         logger.warning(f"[APIRoutes] Failed to save mission plan to cache: {e}")
 
-    validation = planner.process_generated_plan(plan)
+    with trace.stage("validate"):
+        validation = planner.process_generated_plan(plan)
+    trace.set_validation(valid=validation.is_valid, errors=validation.errors, enforced=mode.enforce_safety)
+    if not validation.is_valid and not mode.enforce_safety:
+        # safety_shadow (twin / sim only): record the verdict, fly anyway, so
+        # the evaluation sees what the validator would have stopped.
+        log_event("Validator would reject this plan (shadow mode, flying it): " + "; ".join(validation.errors), "error")
+        trace.event("validator_overridden", source="plan", errors=validation.errors)
+        validation = validation.model_copy(update={"is_valid": True, "validated_plan": plan})
+        planner.current_plan, planner.state = plan, PlannerState.EXECUTING
     if not validation.is_valid:
         log_event("Plan rejected by the safety validator: " + "; ".join(validation.errors), "error")
-        return {"success": False, "errors": validation.errors, "raw_command": req.command}
+        tr = trace.finish(status="rejected", reason="; ".join(validation.errors))
+        return {"success": False, "errors": validation.errors, "raw_command": req.command,
+                "mission_id": (tr or {}).get("id"), "run_mode": mode.name}
+
+    mission_trace = trace.current()
 
     async def _run_mission_async(valid_plan):
         try:
@@ -519,12 +602,18 @@ async def submit_command(req: CommandRequest):
             else:
                 planner.state = PlannerState.ERROR
                 log_event(f"Mission failed: {executor.last_error or 'see backend log'}", "error")
+            trace.finish(mission_trace, status="done" if ok else "failed", error=None if ok else executor.last_error,
+                         replans=getattr(planner, "replan_count", 0))
         except Exception as exc:
             import traceback
             planner.state = PlannerState.ERROR
             log_event(f"Mission crashed: {exc}", "error")
             logger.error(f"[AERIS] Mission execution crashed: {exc}\n{traceback.format_exc()}")
+            trace.finish(mission_trace, status="crashed", error=str(exc))
 
+    executor.set_mission_target(target_label, target_xy)
+    trace.event("dispatched", skills=len(plan.skills), target=target_label)
+    mission_id = mission_trace.id if mission_trace else None
     asyncio.create_task(_run_mission_async(validation.validated_plan))
     log_event(f"Dispatched {len(plan.skills)} skills [{plan.source or 'planner'}]")
     # Published on the telemetry socket so every open dashboard shows the
@@ -536,6 +625,9 @@ async def submit_command(req: CommandRequest):
 
     return {
         "success": True,
+        "mission_id": mission_id,
+        "run_mode": mode.name,
+        "validated": bool(trace.snapshot() and trace.snapshot()["validation"].get("valid")),
         "raw_command": req.command,
         "reasoning": plan.reasoning,
         "skills": [s.model_dump() for s in plan.skills],
@@ -543,6 +635,18 @@ async def submit_command(req: CommandRequest):
         "pipeline": plan.pipeline,
         "spec": plan.spec.model_dump() if plan.spec else None,
     }
+
+
+@router.get("/api/run_modes")
+async def run_modes():
+    return {"default": run_mode.default_name(), "active": run_mode.current().name,
+            "modes": {k: vars(v) for k, v in run_mode.MODES.items()}}
+
+
+@router.get("/api/trace")
+async def mission_trace():
+    """The latest mission's trace: mode, planner, model calls, stage timings, events."""
+    return trace.snapshot() or {}
 
 
 @router.get("/api/cache/status")
@@ -673,6 +777,27 @@ async def twin_move_object(req: ObjectMoveRequest):
     return {"success": bool(ok)}
 
 
+@router.post("/api/twin/link_delay")
+async def twin_link_delay(req: LinkDelayRequest):
+    """Hold every flight command this long before it is sent: the
+    communication-delay disturbance."""
+    drone = app_context["drone"]
+    if not _is_twin(drone) or not hasattr(drone, "set_link_delay"):
+        return {"success": False, "error": "The active backend is not the digital twin."}
+    drone.set_link_delay(req.ms)
+    log_event(f"Disturbance: command-link delay {req.ms:.0f} ms")
+    return {"success": True, "ms": req.ms}
+
+
+@router.get("/api/eval/truth")
+async def evaluation_truth():
+    """Current true object poses in the twin. Evaluation only."""
+    drone = app_context["drone"]
+    if not _is_twin(drone):
+        return {"available": False}
+    return {"available": True, "objects": drone.ground_truth(), "vehicle": drone.truth or None}
+
+
 @router.get("/api/scene")
 async def scene_status():
     """What the perception stack currently knows about the scene."""
@@ -739,6 +864,10 @@ def _telemetry_payload() -> dict:
     )
     payload = packet.model_dump()
     payload["connected"] = bool(getattr(drone, "is_connected", True)) if drone else False
+    # Every record says which configuration produced it.
+    tr = trace.current()
+    payload["run_mode"] = run_mode.current().name
+    payload["mission_id"] = tr.id if tr is not None else None
     monitor = app_context.get("monitor")
     if monitor:
         payload["monitor"] = monitor.snapshot()

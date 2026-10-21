@@ -116,16 +116,17 @@ class SpatialGrounding:
             self._height_map = points[..., 2]
         return list(proposals)
 
-    def ground_bbox(self, bbox: BoundingBox, img_w: int = None, img_h: int = None):
+    def ground_bbox(self, bbox: BoundingBox, img_w: int = None, img_h: int = None, verify: bool = True):
         """Ground a detection box.
 
         Returns (x, y, top_z, proposal). With a depth camera the proposal is
         the physical object the box refers to, and None for all four means
-        the box matched nothing real. Without depth, proposal is None and the
-        position is the floor projection of the box centre.
+        the box matched nothing real. Without depth, or with verify=False
+        (the no_depth_check ablation), proposal is None and the position is
+        the floor projection of the box centre.
         """
         box = self._to_native(bbox, img_w, img_h)
-        if self.has_depth:
+        if self.has_depth and verify:
             from backend.vision.scene_proposals import match_proposal
             match = match_proposal(box, self.refresh_scene())
             if match is None:

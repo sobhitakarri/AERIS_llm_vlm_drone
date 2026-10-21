@@ -59,3 +59,26 @@ Unit tests for these are in `backend/tests/test_live_run_fixes.py`.
   Qwen2-VL detection did not finish within 60 s on this PC.
 * The dashboard screenshot was taken by a headless browser, which is why its
   simulation-speed chip reads x0.00.
+
+## 9. Cases 10-17: harder wording, 21 October 2026
+
+Same airframe and scene (`scene_lab`), model `gemini-3.6-flash`, run mode `full`, one scored
+flight per case. 8/8 after one re-run. Log: `logs/06_new_language_missions.log`; per-trial data
+with stage timings and model calls: `metrics/trials_cases10-17.csv`.
+
+* Case 13 ("…if it is in front of the cube, otherwise look at the cube") is scored as "went to the
+  bottle, not the cube". The 49 cm in the table is the 0.5 m viewing distance, not an error.
+* Case 14 ("the cylindrical object") is ambiguous on purpose. The VLM chose the steel drum.
+* Case 16 ("the end of the wall"): the VLM placed the end at (-0.45, -1.34), 19 cm along the wall
+  from the true end at (-0.45, -1.15). It passes against the 30 cm tolerance, narrowly.
+* Case 17 ("Fly in a star pattern") **failed on the first attempt and found a planner fault**. A
+  command with no altitude was planned at the vehicle's current height, which is 0 m on the pad,
+  then clamped to the 0.25 m floor limit. One star vertex lies over the 0.23 m yellow crate; the
+  route planner refused to fly through it and the mission ended with a controlled landing.
+  Fix: from the ground, a command without an altitude now uses the 0.6 m cruise height the
+  UAV-VLA pipeline already used (`backend/planning/local_planner.py`, test in
+  `backend/tests/test_benchmark_scenarios.py`). The re-run passed. First attempt kept as
+  `videos/case17_fly_in_a_star_pattern_attempt1.mp4`, `images/..._attempt1.jpg` and
+  `metrics/benchmark_case17_attempt1_before_altitude_fix.json`.
+
+Wrong-object tests with look-alike objects are in [scene_distractor/](scene_distractor/README.md).

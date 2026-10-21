@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-13 14:01:37",
+  "generated": "2026-10-21 12:04:47",
   "unit_tests": "218 passed, 1 warning",
   "validation": {
     "litewing_truth": {
@@ -80,12 +80,22 @@
   },
   "link_check": "PASS",
   "benchmark": {
-    "created": "2026-10-12 16:06:24",
-    "model": "gemini-robotics-er-2-preview",
+    "created": "2026-10-21 11:41:20",
+    "run_id": "20261021_114007",
+    "model": "gemini-3.6-flash",
     "airframe": "LiteWing ESP32-S3",
     "scene": "scene_lab",
-    "passed": 8,
-    "total": 8
+    "modes": [
+      "full"
+    ],
+    "disturbances": [
+      "none"
+    ],
+    "seeds": 1,
+    "randomize": false,
+    "paraphrase": false,
+    "passed": 16,
+    "total": 16
   },
   "replan": {
     "prompt": "Find the red bottle and hover above it for 25 seconds",

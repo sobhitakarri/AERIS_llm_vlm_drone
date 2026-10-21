@@ -5,6 +5,7 @@ https://ai.google.dev/gemini-api/docs/interactions
 import os
 import re
 import json
+import threading
 import time
 from typing import Any, Optional
 from backend.models.base_llm import LLMProvider
@@ -177,6 +178,9 @@ class GeminiProvider(LLMProvider, VLMProvider):
         self.client = None
         self.model_name = settings.gemini_model
         self.is_live = False
+        # Requests sent by the current call on this thread, for the mission
+        # trace: planning and the perception worker call from different threads.
+        self._tls = threading.local()
 
         if GENAI_SDK_AVAILABLE and self.api_key:
             try:
@@ -194,11 +198,33 @@ class GeminiProvider(LLMProvider, VLMProvider):
                 "Copy .env.example to .env and paste a key from https://aistudio.google.com/apikey"
             )
 
+    def _local(self) -> threading.local:
+        if "_tls" not in self.__dict__:
+            self._tls = threading.local()
+        return self._tls
+
+    @property
+    def last_attempts(self) -> list:
+        return list(getattr(self._local(), "attempts", None) or [])
+
+    def _reset_attempts(self) -> None:
+        self._local().attempts = []
+
+    def _note_attempt(self, model: str, api: str, t0: float, raw: str = None, error: Exception = None) -> None:
+        tls = self._local()
+        if not hasattr(tls, "attempts"):
+            tls.attempts = []
+        tls.attempts.append({
+            "model": model, "api": api, "latency_s": round(time.perf_counter() - t0, 3),
+            "raw": raw, "error": str(error)[:300] if error else None,
+        })
+
     def _generate_json(self, prompt: str) -> dict:
         last_err = None
         models = [self.model_name] + [m for m in GEMINI_MODEL_CANDIDATES if m != self.model_name]
         for name in models:
             if hasattr(self.client, "interactions"):
+                t0, raw = time.perf_counter(), None
                 try:
                     interaction = self.client.interactions.create(
                         model=name,
@@ -209,36 +235,47 @@ class GeminiProvider(LLMProvider, VLMProvider):
                             "schema": PLAN_JSON_SCHEMA,
                         },
                     )
-                    data = _extract_json(_interaction_text(interaction))
+                    raw = _interaction_text(interaction)
+                    data = _extract_json(raw)
+                    self._note_attempt(name, "interactions", t0, raw)
                     self.model_name = name
                     logger.info(f"Gemini Interactions plan from {name}")
                     return data
                 except Exception as e:
+                    self._note_attempt(name, "interactions", t0, raw, e)
                     last_err = e
                     logger.warning(f"Interactions API model '{name}' failed: {e}")
             if types is not None:
+                t0, raw = time.perf_counter(), None
                 try:
                     response = self.client.models.generate_content(
                         model=name,
                         contents=prompt,
                         config=types.GenerateContentConfig(response_mime_type="application/json"),
                     )
-                    data = _extract_json(getattr(response, "text", "") or "")
+                    raw = getattr(response, "text", "") or ""
+                    data = _extract_json(raw)
+                    self._note_attempt(name, "generate_content", t0, raw)
                     self.model_name = name
                     logger.info(f"Gemini generate_content plan from {name}")
                     return data
                 except Exception as e:
+                    self._note_attempt(name, "generate_content", t0, raw, e)
                     last_err = e
                     logger.warning(f"generate_content model '{name}' failed: {e}")
         raise RuntimeError(last_err)
 
     def plan(self, raw_command: str, capabilities: RobotCapabilities, context=None) -> MissionPlan:
         """Code planner first, then disk cache, then Gemini."""
+        from backend.core import run_mode
         logger.info(f"Generating plan for command: '{raw_command}'")
+        self._reset_attempts()
         ctx = context if isinstance(context, dict) else {}
         intent = parse_intent(raw_command, ctx)
+        # LLM-only baseline: every command goes to the model.
+        force_llm = run_mode.current().force_llm and self.client is not None
 
-        if intent.use_code:
+        if intent.use_code and not force_llm:
             skills = clip_skills_to_workspace(
                 plan_from_intent(intent, ctx), capabilities.workspace
             )
@@ -391,6 +428,7 @@ class GeminiProvider(LLMProvider, VLMProvider):
         Falls back to a stub when the client is unavailable.
         """
         logger.info(f"VLM target resolution query: '{target_description}'")
+        self._reset_attempts()
 
         if self.client and types is not None:
             try:
@@ -412,6 +450,7 @@ class GeminiProvider(LLMProvider, VLMProvider):
                 for model_name in attempts:
                     if model_name == skip:
                         continue
+                    t0, raw_text = time.perf_counter(), None
                     try:
                         response = self.client.models.generate_content(
                             model=model_name,
@@ -419,6 +458,7 @@ class GeminiProvider(LLMProvider, VLMProvider):
                             config=types.GenerateContentConfig(response_mime_type="application/json"),
                         )
                         raw_text = getattr(response, "text", "") or ""
+                        self._note_attempt(model_name, "generate_content", t0, raw_text)
                         logger.info(f"Gemini VLM response ({model_name}): {' '.join(raw_text.split())[:300]}")
                         try:
                             data = _extract_json(raw_text)
@@ -472,6 +512,8 @@ class GeminiProvider(LLMProvider, VLMProvider):
                             confidence=round(min(confidence, gate), 2),
                         )
                     except Exception as e:
+                        if raw_text is None:
+                            self._note_attempt(model_name, "generate_content", t0, None, e)
                         logger.warning(f"Gemini VLM model '{model_name}' failed: {e}")
                         if any(k in str(e) for k in _TRANSIENT):
                             time.sleep(2.0)        # overloaded or slow: the same model gets another go

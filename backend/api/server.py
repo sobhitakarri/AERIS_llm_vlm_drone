@@ -16,7 +16,10 @@ from backend.models.gemini_provider import GeminiProvider
 from backend.models.qwen_provider import QwenProvider
 from backend.models.qwen25_llm_provider import Qwen25LLMProvider
 from backend.runtime.state_manager import StateManager
-from backend.runtime.event_bus import EVENT_MISSION_FINISHED, EVENT_TARGET_LOST, event_bus
+from backend.runtime.event_bus import (
+    EVENT_MISSION_FINISHED, EVENT_STEP_COMPLETED, EVENT_STEP_STARTED, EVENT_TARGET_LOST, event_bus,
+)
+from backend.core import run_mode, trace
 from backend.vision.camera_manager import CameraManager
 from backend.vision.spatial_grounding import SpatialGrounding
 from backend.vision.fast_cv import FastPerception
@@ -30,6 +33,9 @@ from backend.core.logger import get_logger
 logger = get_logger("Server")
 
 TWIN_MODES = ("twin", "digital_twin", "simulink")
+# Largest move of a tracked target that is replanned to. Beyond it the
+# re-detection is taken to be a different object (see mission_executor).
+_MAX_TARGET_JUMP_M = 1.0
 
 
 def make_drone(mode: str, uri: str = None, launch_twin: bool = False):
@@ -71,6 +77,14 @@ def make_models(model_mode: str):
         return llm, vlm, "local_split"
     llm = GeminiProvider()
     return llm, llm, "gemini"
+
+
+def _trace_step_started(d: dict) -> None:
+    trace.event("step_started", step=d.get("step"), skill=d.get("skill"), params=d.get("params"))
+
+
+def _trace_step_completed(d: dict) -> None:
+    trace.event("step_completed", step=d.get("step"), skill=d.get("skill"))
 
 
 def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool = False) -> FastAPI:
@@ -173,6 +187,22 @@ def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool
         if sm and not sm.is_actionable(label):
             logger.info("[Replan] Ignoring drift for '%s': target is not actionable.", label)
             return
+        drift = {k: round(float(info[k]), 3) for k in ("old_x", "old_y", "new_x", "new_y", "drift") if k in info}
+        active_executor = app_context.get("executor") or executor
+        if float(info.get("drift", 0.0)) > _MAX_TARGET_JUMP_M:
+            # Too far for the same object to have moved: a different object
+            # answered the re-detection. Treat the target as lost instead.
+            trace.event("replan_rejected_jump", label=label, **drift)
+            logger.warning("[Replan] '%s' reappeared %.2f m away: not the same object; treating it as lost.",
+                           label, float(info.get("drift", 0.0)))
+            active_executor.note_target_lost(label)
+            return
+        if not run_mode.current().replan:
+            # Ablation: the drift was seen, but the plan is not changed.
+            trace.event("replan_suppressed", label=label, **drift)
+            logger.info("[Replan] Drift of '%s' not acted on: replanning is off in this run mode.", label)
+            return
+        trace.event("replan", label=label, **drift)
         planner.trigger_replan(f"{label} drifted {info.get('drift', 0):.2f}m")
         ws = (app_context.get("capabilities") or capabilities).workspace
         nx = max(ws.x_min, min(float(info["new_x"]), ws.x_max))
@@ -187,13 +217,17 @@ def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool
         patch = MissionPlan(raw_command=f"replan {label}", reasoning="target drift", skills=skills, source="replan")
         validation = planner.validator.validate_plan(patch)
         from backend.planning.planner import PlannerState
+        if not validation.is_valid and not run_mode.current().enforce_safety:
+            trace.event("validator_overridden", source="replan", errors=validation.errors)
+            validation = validation.model_copy(update={"is_valid": True, "validated_plan": patch})
         if not validation.is_valid:
+            trace.event("replan_rejected", label=label, errors=validation.errors)
             logger.warning("[Replan] Rejected unsafe replan: %s", validation.errors)
             if planner.state == PlannerState.REPLANNING:
                 planner.state = PlannerState.EXECUTING
             return
-        active_executor = app_context.get("executor") or executor
         active_executor.inject_replan((validation.validated_plan or patch).skills)
+        active_executor.update_target_position(nx, ny)
         if planner.state == PlannerState.REPLANNING:
             planner.state = PlannerState.EXECUTING
 
@@ -214,13 +248,22 @@ def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool
 
     def _on_target_lost(data) -> None:
         label = (data or {}).get("label", "")
+        trace.event("target_lost", label=label)
         logger.warning("[Safety] TARGET_LOST '%s' — dropping pending target-directed replan.", label)
-        executor.clear_replan()
+        active_executor = app_context.get("executor") or executor
+        active_executor.clear_replan()
+        # The plan's coordinates came from this target: stop flying to them.
+        active_executor.note_target_lost(label)
         if state_manager and label:
             state_manager.mark_lost(label)
 
     event_bus.subscribe(EVENT_MISSION_FINISHED, _on_mission_finished)
     event_bus.subscribe(EVENT_TARGET_LOST, _on_target_lost)
+    # Step boundaries on the mission trace, for per-skill timing. The bus is
+    # global: unsubscribe first so a rebuilt app does not record steps twice.
+    for evt, fn in ((EVENT_STEP_STARTED, _trace_step_started), (EVENT_STEP_COMPLETED, _trace_step_completed)):
+        event_bus.unsubscribe(evt, fn)
+        event_bus.subscribe(evt, fn)
 
     app_context.update({
         "drone": drone,

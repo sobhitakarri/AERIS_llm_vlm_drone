@@ -1,11 +1,21 @@
 {
   "meta": {
-    "created": "2026-10-12 16:06:24",
-    "model": "gemini-robotics-er-2-preview",
+    "created": "2026-10-21 11:41:20",
+    "run_id": "20261021_114007",
+    "model": "gemini-3.6-flash",
     "airframe": "LiteWing ESP32-S3",
     "scene": "scene_lab",
-    "passed": 8,
-    "total": 8
+    "modes": [
+      "full"
+    ],
+    "disturbances": [
+      "none"
+    ],
+    "seeds": 1,
+    "randomize": false,
+    "paraphrase": false,
+    "passed": 16,
+    "total": 16
   },
   "results": [
     {
@@ -2871,6 +2881,2907 @@
       "repeat": 1,
       "video": "videos/case08_find_the_purple_elephant_and_hover.mp4",
       "still": "images/case08_find_the_purple_elephant_and_hover.jpg"
+    },
+    {
+      "id": 10,
+      "prompt": "Find cardboard box and hover it",
+      "kind": "above",
+      "plan_latency_s": 12.87,
+      "accepted": true,
+      "mission_id": "8ab9fdfcc07b",
+      "reasoning": "Target 'cardboard box' grounded by depth camera at (-1.60, 1.10) m, top 0.38 m. Plan: hover at 0.72 m above it.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 13.0,
+      "path_m": 3.54,
+      "path": [
+        [
+          -1.8,
+          -1.4,
+          0.011
+        ],
+        [
+          -1.799,
+          -1.401,
+          0.124
+        ],
+        [
+          -1.794,
+          -1.405,
+          0.421
+        ],
+        [
+          -1.788,
+          -1.409,
+          0.631
+        ],
+        [
+          -1.788,
+          -1.409,
+          0.644
+        ],
+        [
+          -1.789,
+          -1.406,
+          0.61
+        ],
+        [
+          -1.79,
+          -1.403,
+          0.582
+        ],
+        [
+          -1.791,
+          -1.401,
+          0.575
+        ],
+        [
+          -1.79,
+          -1.402,
+          0.6
+        ],
+        [
+          -1.782,
+          -1.408,
+          0.685
+        ],
+        [
+          -1.779,
+          -1.411,
+          0.705
+        ],
+        [
+          -1.778,
+          -1.412,
+          0.708
+        ],
+        [
+          -1.774,
+          -1.37,
+          0.707
+        ],
+        [
+          -1.76,
+          -1.203,
+          0.699
+        ],
+        [
+          -1.749,
+          -1.041,
+          0.698
+        ],
+        [
+          -1.738,
+          -0.882,
+          0.701
+        ],
+        [
+          -1.729,
+          -0.722,
+          0.706
+        ],
+        [
+          -1.722,
+          -0.616,
+          0.709
+        ],
+        [
+          -1.715,
+          -0.525,
+          0.709
+        ],
+        [
+          -1.709,
+          -0.43,
+          0.708
+        ],
+        [
+          -1.704,
+          -0.32,
+          0.708
+        ],
+        [
+          -1.697,
+          -0.207,
+          0.707
+        ],
+        [
+          -1.691,
+          -0.112,
+          0.705
+        ],
+        [
+          -1.679,
+          0.044,
+          0.706
+        ],
+        [
+          -1.669,
+          0.17,
+          0.708
+        ],
+        [
+          -1.657,
+          0.289,
+          0.71
+        ],
+        [
+          -1.646,
+          0.396,
+          0.707
+        ],
+        [
+          -1.637,
+          0.51,
+          0.706
+        ],
+        [
+          -1.631,
+          0.617,
+          0.706
+        ],
+        [
+          -1.625,
+          0.738,
+          0.707
+        ],
+        [
+          -1.618,
+          0.854,
+          0.707
+        ],
+        [
+          -1.608,
+          1.004,
+          0.704
+        ],
+        [
+          -1.599,
+          1.119,
+          0.7
+        ],
+        [
+          -1.596,
+          1.139,
+          0.697
+        ],
+        [
+          -1.596,
+          1.118,
+          0.696
+        ],
+        [
+          -1.597,
+          1.092,
+          0.698
+        ],
+        [
+          -1.599,
+          1.074,
+          0.701
+        ],
+        [
+          -1.601,
+          1.072,
+          0.701
+        ],
+        [
+          -1.601,
+          1.081,
+          0.702
+        ],
+        [
+          -1.601,
+          1.093,
+          0.701
+        ],
+        [
+          -1.601,
+          1.105,
+          0.7
+        ],
+        [
+          -1.601,
+          1.116,
+          0.7
+        ],
+        [
+          -1.601,
+          1.124,
+          0.699
+        ],
+        [
+          -1.6,
+          1.129,
+          0.699
+        ],
+        [
+          -1.599,
+          1.132,
+          0.7
+        ]
+      ],
+      "estimator_error_cm": 1.4,
+      "hover_true": [
+        -1.599,
+        1.131,
+        0.7
+      ],
+      "object_matched": "cardboard_box",
+      "object_true": [
+        -1.6,
+        1.1,
+        0
+      ],
+      "target_error_cm": 3.1,
+      "clearance_m": 0.32,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 2,
+      "n_malformed": 1,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0042,
+      "t_goal_s": 0.0032,
+      "t_frame_s": 0.0037,
+      "t_object_search_s": 12.8349,
+      "t_actions_s": 0.0007,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0004,
+      "t_plan_total_s": 12.8493,
+      "grounding_error_cm": 0.1,
+      "run_id": "20261021_112717",
+      "trial": 1,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 10,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case10_find_cardboard_box_and_hover_it.mp4",
+      "still": "images/case10_find_cardboard_box_and_hover_it.jpg",
+      "rerun": true
+    },
+    {
+      "id": 11,
+      "prompt": "Find the shiny red bottle next to the blue cube and hover facing it",
+      "kind": "view",
+      "plan_latency_s": 6.52,
+      "accepted": true,
+      "mission_id": "a6dc686708f0",
+      "reasoning": "Target 'shiny red bottle next to the blue cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.50 m, heading 41 deg.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "ROTATE",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 15.0,
+      "path_m": 4.63,
+      "path": [
+        [
+          -1.8,
+          -1.402,
+          0.011
+        ],
+        [
+          -1.798,
+          -1.402,
+          0.108
+        ],
+        [
+          -1.793,
+          -1.406,
+          0.392
+        ],
+        [
+          -1.785,
+          -1.412,
+          0.644
+        ],
+        [
+          -1.783,
+          -1.413,
+          0.665
+        ],
+        [
+          -1.784,
+          -1.414,
+          0.629
+        ],
+        [
+          -1.788,
+          -1.414,
+          0.59
+        ],
+        [
+          -1.79,
+          -1.414,
+          0.575
+        ],
+        [
+          -1.791,
+          -1.414,
+          0.571
+        ],
+        [
+          -1.786,
+          -1.408,
+          0.601
+        ],
+        [
+          -1.692,
+          -1.325,
+          0.734
+        ],
+        [
+          -1.56,
+          -1.21,
+          0.859
+        ],
+        [
+          -1.444,
+          -1.109,
+          0.963
+        ],
+        [
+          -1.327,
+          -1.008,
+          1.013
+        ],
+        [
+          -1.245,
+          -0.939,
+          1.02
+        ],
+        [
+          -1.184,
+          -0.887,
+          1.022
+        ],
+        [
+          -1.125,
+          -0.836,
+          1.022
+        ],
+        [
+          -1.061,
+          -0.78,
+          1.023
+        ],
+        [
+          -0.994,
+          -0.724,
+          1.023
+        ],
+        [
+          -0.906,
+          -0.648,
+          1.025
+        ],
+        [
+          -0.809,
+          -0.562,
+          1.026
+        ],
+        [
+          -0.71,
+          -0.474,
+          1.027
+        ],
+        [
+          -0.62,
+          -0.393,
+          1.026
+        ],
+        [
+          -0.539,
+          -0.322,
+          1.024
+        ],
+        [
+          -0.454,
+          -0.248,
+          1.022
+        ],
+        [
+          -0.372,
+          -0.175,
+          1.023
+        ],
+        [
+          -0.298,
+          -0.106,
+          1.023
+        ],
+        [
+          -0.219,
+          -0.033,
+          1.024
+        ],
+        [
+          -0.144,
+          0.034,
+          1.026
+        ],
+        [
+          -0.048,
+          0.116,
+          1.026
+        ],
+        [
+          0.04,
+          0.189,
+          1.025
+        ],
+        [
+          0.137,
+          0.27,
+          1.024
+        ],
+        [
+          0.231,
+          0.351,
+          1.025
+        ],
+        [
+          0.321,
+          0.432,
+          1.026
+        ],
+        [
+          0.408,
+          0.515,
+          1.026
+        ],
+        [
+          0.483,
+          0.586,
+          1.026
+        ],
+        [
+          0.57,
+          0.669,
+          1.026
+        ],
+        [
+          0.643,
+          0.735,
+          1.026
+        ],
+        [
+          0.738,
+          0.817,
+          1.026
+        ],
+        [
+          0.826,
+          0.893,
+          1.025
+        ],
+        [
+          0.873,
+          0.933,
+          1.024
+        ],
+        [
+          0.875,
+          0.935,
+          1.017
+        ],
+        [
+          0.852,
+          0.915,
+          1.013
+        ],
+        [
+          0.829,
+          0.893,
+          1.017
+        ],
+        [
+          0.817,
+          0.88,
+          1.022
+        ],
+        [
+          0.811,
+          0.87,
+          1.023
+        ],
+        [
+          0.813,
+          0.866,
+          1.02
+        ],
+        [
+          0.82,
+          0.869,
+          1.019
+        ],
+        [
+          0.826,
+          0.875,
+          1.018
+        ],
+        [
+          0.832,
+          0.881,
+          1.016
+        ],
+        [
+          0.839,
+          0.887,
+          1.015
+        ],
+        [
+          0.845,
+          0.891,
+          1.017
+        ],
+        [
+          0.847,
+          0.892,
+          1.019
+        ],
+        [
+          0.846,
+          0.891,
+          1.018
+        ]
+      ],
+      "estimator_error_cm": 1.4,
+      "hover_true": [
+        0.846,
+        0.891,
+        1.018
+      ],
+      "object_matched": "red_bottle",
+      "object_true": [
+        1.2,
+        1.2,
+        0.75
+      ],
+      "standoff_error_cm": 3.0,
+      "heading_error_deg": 0.4,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 1,
+      "n_malformed": 0,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0005,
+      "t_goal_s": 0.0008,
+      "t_frame_s": 0.0105,
+      "t_object_search_s": 6.1516,
+      "t_actions_s": 0.328,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0003,
+      "t_plan_total_s": 6.4956,
+      "grounding_error_cm": 1.1,
+      "run_id": "20261021_112717",
+      "trial": 2,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 11,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case11_find_the_shiny_red_bottle_next.mp4",
+      "still": "images/case11_find_the_shiny_red_bottle_next.jpg",
+      "rerun": true
+    },
+    {
+      "id": 12,
+      "prompt": "Find the bottle that is left of the blue cube and inspect it from 0.4 m away",
+      "kind": "view",
+      "plan_latency_s": 19.6,
+      "accepted": true,
+      "mission_id": "51e29fa8fae4",
+      "reasoning": "Target 'bottle that is left of the blue cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.40 m, heading 41 deg.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "ROTATE",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 14.2,
+      "path_m": 4.59,
+      "path": [
+        [
+          -1.802,
+          -1.403,
+          0.011
+        ],
+        [
+          -1.801,
+          -1.403,
+          0.088
+        ],
+        [
+          -1.793,
+          -1.401,
+          0.406
+        ],
+        [
+          -1.786,
+          -1.4,
+          0.608
+        ],
+        [
+          -1.785,
+          -1.398,
+          0.622
+        ],
+        [
+          -1.788,
+          -1.398,
+          0.594
+        ],
+        [
+          -1.789,
+          -1.398,
+          0.581
+        ],
+        [
+          -1.733,
+          -1.349,
+          0.669
+        ],
+        [
+          -1.602,
+          -1.233,
+          0.803
+        ],
+        [
+          -1.468,
+          -1.115,
+          0.927
+        ],
+        [
+          -1.335,
+          -0.995,
+          1.0
+        ],
+        [
+          -1.244,
+          -0.915,
+          1.013
+        ],
+        [
+          -1.165,
+          -0.848,
+          1.014
+        ],
+        [
+          -1.097,
+          -0.791,
+          1.013
+        ],
+        [
+          -1.024,
+          -0.729,
+          1.015
+        ],
+        [
+          -0.942,
+          -0.655,
+          1.017
+        ],
+        [
+          -0.849,
+          -0.572,
+          1.019
+        ],
+        [
+          -0.756,
+          -0.492,
+          1.019
+        ],
+        [
+          -0.648,
+          -0.398,
+          1.018
+        ],
+        [
+          -0.55,
+          -0.313,
+          1.018
+        ],
+        [
+          -0.459,
+          -0.235,
+          1.022
+        ],
+        [
+          -0.358,
+          -0.144,
+          1.021
+        ],
+        [
+          -0.269,
+          -0.066,
+          1.021
+        ],
+        [
+          -0.177,
+          0.014,
+          1.02
+        ],
+        [
+          -0.093,
+          0.087,
+          1.018
+        ],
+        [
+          0.007,
+          0.172,
+          1.018
+        ],
+        [
+          0.101,
+          0.253,
+          1.021
+        ],
+        [
+          0.198,
+          0.338,
+          1.019
+        ],
+        [
+          0.297,
+          0.426,
+          1.016
+        ],
+        [
+          0.391,
+          0.506,
+          1.019
+        ],
+        [
+          0.488,
+          0.588,
+          1.02
+        ],
+        [
+          0.569,
+          0.656,
+          1.02
+        ],
+        [
+          0.668,
+          0.741,
+          1.02
+        ],
+        [
+          0.762,
+          0.823,
+          1.02
+        ],
+        [
+          0.861,
+          0.908,
+          1.02
+        ],
+        [
+          0.937,
+          0.972,
+          1.02
+        ],
+        [
+          0.948,
+          0.981,
+          1.015
+        ],
+        [
+          0.93,
+          0.965,
+          1.012
+        ],
+        [
+          0.904,
+          0.944,
+          1.014
+        ],
+        [
+          0.885,
+          0.929,
+          1.016
+        ],
+        [
+          0.877,
+          0.922,
+          1.017
+        ],
+        [
+          0.876,
+          0.922,
+          1.018
+        ],
+        [
+          0.882,
+          0.926,
+          1.017
+        ],
+        [
+          0.89,
+          0.932,
+          1.017
+        ],
+        [
+          0.899,
+          0.94,
+          1.018
+        ],
+        [
+          0.906,
+          0.947,
+          1.018
+        ],
+        [
+          0.911,
+          0.953,
+          1.015
+        ]
+      ],
+      "estimator_error_cm": 1.9,
+      "hover_true": [
+        0.912,
+        0.955,
+        1.015
+      ],
+      "object_matched": "red_bottle",
+      "object_true": [
+        1.2,
+        1.2,
+        0.75
+      ],
+      "standoff_error_cm": 2.1,
+      "heading_error_deg": 0.7,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 1,
+      "n_malformed": 0,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0002,
+      "t_goal_s": 0.0003,
+      "t_frame_s": 0.0012,
+      "t_object_search_s": 19.2484,
+      "t_actions_s": 0.3371,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0003,
+      "t_plan_total_s": 19.5883,
+      "grounding_error_cm": 1.1,
+      "run_id": "20261021_112717",
+      "trial": 3,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 12,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case12_find_the_bottle_that_is_left.mp4",
+      "still": "images/case12_find_the_bottle_that_is_left.jpg",
+      "rerun": true
+    },
+    {
+      "id": 13,
+      "prompt": "Find the red bottle if it is in front of the cube, otherwise look at the cube",
+      "kind": "near",
+      "plan_latency_s": 14.82,
+      "accepted": true,
+      "mission_id": "1ccd521297ae",
+      "reasoning": "Target 'red bottle that is in front of the cube' grounded by depth camera at (1.19, 1.19) m, top 0.94 m, standing on a 0.74 m surface. Plan: view from 0.50 m, heading 41 deg. Condition checked: 'in front of the cube'.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "ROTATE",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 14.5,
+      "path_m": 4.57,
+      "path": [
+        [
+          -1.816,
+          -1.411,
+          0.011
+        ],
+        [
+          -1.815,
+          -1.41,
+          0.107
+        ],
+        [
+          -1.807,
+          -1.409,
+          0.434
+        ],
+        [
+          -1.798,
+          -1.407,
+          0.649
+        ],
+        [
+          -1.798,
+          -1.407,
+          0.636
+        ],
+        [
+          -1.8,
+          -1.406,
+          0.589
+        ],
+        [
+          -1.802,
+          -1.405,
+          0.562
+        ],
+        [
+          -1.802,
+          -1.403,
+          0.555
+        ],
+        [
+          -1.763,
+          -1.37,
+          0.638
+        ],
+        [
+          -1.623,
+          -1.251,
+          0.788
+        ],
+        [
+          -1.484,
+          -1.132,
+          0.911
+        ],
+        [
+          -1.374,
+          -1.039,
+          0.984
+        ],
+        [
+          -1.265,
+          -0.947,
+          1.008
+        ],
+        [
+          -1.189,
+          -0.883,
+          1.008
+        ],
+        [
+          -1.119,
+          -0.825,
+          1.004
+        ],
+        [
+          -1.042,
+          -0.759,
+          1.004
+        ],
+        [
+          -0.959,
+          -0.686,
+          1.006
+        ],
+        [
+          -0.847,
+          -0.587,
+          1.009
+        ],
+        [
+          -0.742,
+          -0.494,
+          1.011
+        ],
+        [
+          -0.642,
+          -0.41,
+          1.015
+        ],
+        [
+          -0.537,
+          -0.324,
+          1.014
+        ],
+        [
+          -0.444,
+          -0.245,
+          1.011
+        ],
+        [
+          -0.338,
+          -0.154,
+          1.01
+        ],
+        [
+          -0.246,
+          -0.073,
+          1.011
+        ],
+        [
+          -0.151,
+          0.008,
+          1.012
+        ],
+        [
+          -0.046,
+          0.097,
+          1.012
+        ],
+        [
+          0.053,
+          0.182,
+          1.011
+        ],
+        [
+          0.151,
+          0.266,
+          1.011
+        ],
+        [
+          0.248,
+          0.348,
+          1.011
+        ],
+        [
+          0.344,
+          0.432,
+          1.01
+        ],
+        [
+          0.449,
+          0.524,
+          1.011
+        ],
+        [
+          0.548,
+          0.611,
+          1.01
+        ],
+        [
+          0.646,
+          0.694,
+          1.012
+        ],
+        [
+          0.749,
+          0.783,
+          1.014
+        ],
+        [
+          0.846,
+          0.87,
+          1.014
+        ],
+        [
+          0.873,
+          0.896,
+          1.012
+        ],
+        [
+          0.853,
+          0.882,
+          1.008
+        ],
+        [
+          0.829,
+          0.866,
+          1.008
+        ],
+        [
+          0.81,
+          0.856,
+          1.009
+        ],
+        [
+          0.801,
+          0.855,
+          1.013
+        ],
+        [
+          0.799,
+          0.858,
+          1.014
+        ],
+        [
+          0.802,
+          0.862,
+          1.013
+        ],
+        [
+          0.808,
+          0.867,
+          1.011
+        ],
+        [
+          0.819,
+          0.87,
+          1.01
+        ],
+        [
+          0.828,
+          0.87,
+          1.008
+        ],
+        [
+          0.836,
+          0.872,
+          1.009
+        ]
+      ],
+      "estimator_error_cm": 2.4,
+      "hover_true": [
+        0.836,
+        0.871,
+        1.009
+      ],
+      "object_matched": "red_bottle",
+      "object_true": [
+        1.2,
+        1.2,
+        0.75
+      ],
+      "target_error_cm": 49.0,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 1,
+      "n_malformed": 0,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0002,
+      "t_goal_s": 0.0014,
+      "t_frame_s": 0.002,
+      "t_object_search_s": 14.7685,
+      "t_actions_s": 0.0317,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0004,
+      "t_plan_total_s": 14.8054,
+      "grounding_error_cm": 1.1,
+      "run_id": "20261021_112717",
+      "trial": 4,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 13,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case13_find_the_red_bottle_if_it.mp4",
+      "still": "images/case13_find_the_red_bottle_if_it.jpg",
+      "rerun": true
+    },
+    {
+      "id": 14,
+      "prompt": "Look at the cylindrical object and hover above its center",
+      "kind": "above",
+      "plan_latency_s": 20.46,
+      "accepted": true,
+      "mission_id": "c60b5e0128fc",
+      "reasoning": "Target 'cylindrical object' grounded by depth camera at (1.45, -0.85) m, top 0.59 m. Plan: hover at 0.94 m above it.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "ROTATE",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 16.1,
+      "path_m": 4.63,
+      "path": [
+        [
+          -1.796,
+          -1.395,
+          0.011
+        ],
+        [
+          -1.794,
+          -1.394,
+          0.124
+        ],
+        [
+          -1.786,
+          -1.393,
+          0.441
+        ],
+        [
+          -1.776,
+          -1.393,
+          0.628
+        ],
+        [
+          -1.775,
+          -1.395,
+          0.63
+        ],
+        [
+          -1.778,
+          -1.399,
+          0.594
+        ],
+        [
+          -1.782,
+          -1.402,
+          0.59
+        ],
+        [
+          -1.774,
+          -1.401,
+          0.713
+        ],
+        [
+          -1.774,
+          -1.403,
+          0.838
+        ],
+        [
+          -1.781,
+          -1.404,
+          0.896
+        ],
+        [
+          -1.786,
+          -1.403,
+          0.905
+        ],
+        [
+          -1.777,
+          -1.398,
+          0.905
+        ],
+        [
+          -1.649,
+          -1.347,
+          0.897
+        ],
+        [
+          -1.476,
+          -1.277,
+          0.899
+        ],
+        [
+          -1.327,
+          -1.217,
+          0.905
+        ],
+        [
+          -1.196,
+          -1.163,
+          0.911
+        ],
+        [
+          -1.084,
+          -1.116,
+          0.915
+        ],
+        [
+          -0.999,
+          -1.081,
+          0.915
+        ],
+        [
+          -0.913,
+          -1.046,
+          0.914
+        ],
+        [
+          -0.82,
+          -1.008,
+          0.912
+        ],
+        [
+          -0.724,
+          -0.968,
+          0.911
+        ],
+        [
+          -0.614,
+          -0.923,
+          0.91
+        ],
+        [
+          -0.531,
+          -0.887,
+          0.911
+        ],
+        [
+          -0.519,
+          -0.88,
+          0.91
+        ],
+        [
+          -0.538,
+          -0.886,
+          0.908
+        ],
+        [
+          -0.49,
+          -0.897,
+          0.91
+        ],
+        [
+          -0.395,
+          -0.901,
+          0.908
+        ],
+        [
+          -0.212,
+          -0.902,
+          0.908
+        ],
+        [
+          -0.045,
+          -0.894,
+          0.91
+        ],
+        [
+          0.116,
+          -0.883,
+          0.913
+        ],
+        [
+          0.208,
+          -0.876,
+          0.911
+        ],
+        [
+          0.307,
+          -0.87,
+          0.908
+        ],
+        [
+          0.401,
+          -0.868,
+          0.908
+        ],
+        [
+          0.503,
+          -0.871,
+          0.906
+        ],
+        [
+          0.617,
+          -0.873,
+          0.903
+        ],
+        [
+          0.716,
+          -0.877,
+          0.902
+        ],
+        [
+          0.828,
+          -0.88,
+          0.903
+        ],
+        [
+          0.923,
+          -0.881,
+          0.905
+        ],
+        [
+          1.039,
+          -0.879,
+          0.908
+        ],
+        [
+          1.137,
+          -0.877,
+          0.908
+        ],
+        [
+          1.254,
+          -0.876,
+          0.906
+        ],
+        [
+          1.355,
+          -0.876,
+          0.905
+        ],
+        [
+          1.47,
+          -0.874,
+          0.904
+        ],
+        [
+          1.528,
+          -0.872,
+          0.905
+        ],
+        [
+          1.522,
+          -0.871,
+          0.906
+        ],
+        [
+          1.496,
+          -0.869,
+          0.905
+        ],
+        [
+          1.475,
+          -0.866,
+          0.906
+        ],
+        [
+          1.459,
+          -0.861,
+          0.906
+        ],
+        [
+          1.453,
+          -0.855,
+          0.905
+        ],
+        [
+          1.453,
+          -0.852,
+          0.904
+        ],
+        [
+          1.458,
+          -0.851,
+          0.903
+        ],
+        [
+          1.465,
+          -0.851,
+          0.902
+        ],
+        [
+          1.471,
+          -0.852,
+          0.903
+        ],
+        [
+          1.478,
+          -0.854,
+          0.906
+        ],
+        [
+          1.482,
+          -0.856,
+          0.907
+        ],
+        [
+          1.483,
+          -0.858,
+          0.907
+        ],
+        [
+          1.481,
+          -0.86,
+          0.904
+        ]
+      ],
+      "estimator_error_cm": 2.5,
+      "hover_true": [
+        1.479,
+        -0.86,
+        0.903
+      ],
+      "object_matched": "steel_drum",
+      "object_true": [
+        1.45,
+        -0.85,
+        0
+      ],
+      "target_error_cm": 3.1,
+      "clearance_m": 0.3,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 4,
+      "n_malformed": 3,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0001,
+      "t_goal_s": 0.0002,
+      "t_frame_s": 0.0013,
+      "t_object_search_s": 20.444,
+      "t_actions_s": 0.0003,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0002,
+      "t_plan_total_s": 20.4469,
+      "run_id": "20261021_112717",
+      "trial": 5,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 14,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case14_look_at_the_cylindrical_object_and.mp4",
+      "still": "images/case14_look_at_the_cylindrical_object_and.jpg",
+      "rerun": true
+    },
+    {
+      "id": 15,
+      "prompt": "Fly 0.5m and make a square in air",
+      "kind": "shape",
+      "plan_latency_s": 0.04,
+      "accepted": true,
+      "mission_id": "a0f93ec66ead",
+      "reasoning": "[CODE] intent=shape | NeLV parser\u2192route\u2192path\u2192control",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 25.5,
+      "path_m": 8.17,
+      "path": [
+        [
+          -1.816,
+          -1.406,
+          0.011
+        ],
+        [
+          -1.814,
+          -1.407,
+          0.142
+        ],
+        [
+          -1.807,
+          -1.409,
+          0.379
+        ],
+        [
+          -1.799,
+          -1.411,
+          0.545
+        ],
+        [
+          -1.798,
+          -1.412,
+          0.547
+        ],
+        [
+          -1.803,
+          -1.412,
+          0.508
+        ],
+        [
+          -1.808,
+          -1.411,
+          0.476
+        ],
+        [
+          -1.813,
+          -1.409,
+          0.462
+        ],
+        [
+          -1.767,
+          -1.368,
+          0.46
+        ],
+        [
+          -1.649,
+          -1.273,
+          0.459
+        ],
+        [
+          -1.503,
+          -1.156,
+          0.464
+        ],
+        [
+          -1.377,
+          -1.057,
+          0.472
+        ],
+        [
+          -1.264,
+          -0.966,
+          0.477
+        ],
+        [
+          -1.173,
+          -0.889,
+          0.477
+        ],
+        [
+          -1.105,
+          -0.829,
+          0.477
+        ],
+        [
+          -1.032,
+          -0.765,
+          0.476
+        ],
+        [
+          -0.94,
+          -0.689,
+          0.473
+        ],
+        [
+          -0.85,
+          -0.616,
+          0.474
+        ],
+        [
+          -0.742,
+          -0.531,
+          0.473
+        ],
+        [
+          -0.647,
+          -0.456,
+          0.473
+        ],
+        [
+          -0.543,
+          -0.374,
+          0.473
+        ],
+        [
+          -0.45,
+          -0.299,
+          0.474
+        ],
+        [
+          -0.359,
+          -0.226,
+          0.474
+        ],
+        [
+          -0.255,
+          -0.142,
+          0.474
+        ],
+        [
+          -0.148,
+          -0.056,
+          0.474
+        ],
+        [
+          -0.054,
+          0.019,
+          0.475
+        ],
+        [
+          0.047,
+          0.1,
+          0.477
+        ],
+        [
+          0.152,
+          0.185,
+          0.476
+        ],
+        [
+          0.258,
+          0.27,
+          0.475
+        ],
+        [
+          0.35,
+          0.344,
+          0.474
+        ],
+        [
+          0.449,
+          0.425,
+          0.474
+        ],
+        [
+          0.538,
+          0.495,
+          0.476
+        ],
+        [
+          0.554,
+          0.508,
+          0.474
+        ],
+        [
+          0.534,
+          0.494,
+          0.471
+        ],
+        [
+          0.51,
+          0.462,
+          0.473
+        ],
+        [
+          0.495,
+          0.301,
+          0.467
+        ],
+        [
+          0.488,
+          0.13,
+          0.47
+        ],
+        [
+          0.488,
+          -0.069,
+          0.476
+        ],
+        [
+          0.492,
+          -0.202,
+          0.479
+        ],
+        [
+          0.498,
+          -0.32,
+          0.478
+        ],
+        [
+          0.501,
+          -0.413,
+          0.476
+        ],
+        [
+          0.5,
+          -0.505,
+          0.476
+        ],
+        [
+          0.498,
+          -0.522,
+          0.475
+        ],
+        [
+          0.497,
+          -0.5,
+          0.474
+        ],
+        [
+          0.478,
+          -0.479,
+          0.476
+        ],
+        [
+          0.335,
+          -0.466,
+          0.473
+        ],
+        [
+          0.187,
+          -0.464,
+          0.471
+        ],
+        [
+          0.02,
+          -0.469,
+          0.471
+        ],
+        [
+          -0.14,
+          -0.479,
+          0.476
+        ],
+        [
+          -0.271,
+          -0.489,
+          0.477
+        ],
+        [
+          -0.363,
+          -0.493,
+          0.476
+        ],
+        [
+          -0.475,
+          -0.494,
+          0.477
+        ],
+        [
+          -0.52,
+          -0.492,
+          0.474
+        ],
+        [
+          -0.502,
+          -0.49,
+          0.473
+        ],
+        [
+          -0.466,
+          -0.489,
+          0.49
+        ],
+        [
+          -0.426,
+          -0.49,
+          0.507
+        ],
+        [
+          -0.418,
+          -0.495,
+          0.511
+        ],
+        [
+          -0.427,
+          -0.465,
+          0.511
+        ],
+        [
+          -0.451,
+          -0.27,
+          0.505
+        ],
+        [
+          -0.47,
+          -0.098,
+          0.505
+        ],
+        [
+          -0.486,
+          0.083,
+          0.506
+        ],
+        [
+          -0.493,
+          0.237,
+          0.511
+        ],
+        [
+          -0.493,
+          0.352,
+          0.517
+        ],
+        [
+          -0.493,
+          0.463,
+          0.522
+        ],
+        [
+          -0.493,
+          0.532,
+          0.521
+        ],
+        [
+          -0.492,
+          0.522,
+          0.516
+        ],
+        [
+          -0.493,
+          0.498,
+          0.494
+        ],
+        [
+          -0.496,
+          0.484,
+          0.486
+        ],
+        [
+          -0.498,
+          0.454,
+          0.514
+        ],
+        [
+          -0.501,
+          0.449,
+          0.518
+        ],
+        [
+          -0.43,
+          0.455,
+          0.514
+        ],
+        [
+          -0.232,
+          0.467,
+          0.506
+        ],
+        [
+          -0.047,
+          0.479,
+          0.51
+        ],
+        [
+          0.099,
+          0.488,
+          0.513
+        ],
+        [
+          0.239,
+          0.495,
+          0.515
+        ],
+        [
+          0.349,
+          0.497,
+          0.513
+        ],
+        [
+          0.446,
+          0.496,
+          0.513
+        ],
+        [
+          0.523,
+          0.493,
+          0.515
+        ],
+        [
+          0.522,
+          0.491,
+          0.514
+        ],
+        [
+          0.497,
+          0.49,
+          0.493
+        ]
+      ],
+      "altitude_error_cm": 5.7,
+      "passed": true,
+      "planner_source": "code",
+      "intent": "shape",
+      "cache_hit": false,
+      "grounding": null,
+      "llm_model": null,
+      "vlm_model": null,
+      "n_llm_calls": 0,
+      "n_vlm_calls": 0,
+      "n_model_attempts": 0,
+      "n_malformed": 0,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0015,
+      "t_goal_s": null,
+      "t_frame_s": null,
+      "t_object_search_s": null,
+      "t_actions_s": null,
+      "t_llm_plan_s": 0.0029,
+      "t_validate_s": 0.0004,
+      "t_plan_total_s": 0.0047,
+      "run_id": "20261021_112717",
+      "trial": 6,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 15,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case15_fly_0_5m_and_make_a.mp4",
+      "still": "images/case15_fly_0_5m_and_make_a.jpg",
+      "rerun": true
+    },
+    {
+      "id": 16,
+      "prompt": "Hover at the end of the wall",
+      "kind": "point",
+      "plan_latency_s": 13.98,
+      "accepted": true,
+      "mission_id": "7299ca58c8b9",
+      "reasoning": "Target 'end of the wall' grounded by depth camera at (-0.45, -1.34) m, top 1.20 m. Plan: hover at 1.54 m above it.",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "HOVER"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 9.3,
+      "path_m": 2.74,
+      "path": [
+        [
+          -1.804,
+          -1.398,
+          0.011
+        ],
+        [
+          -1.803,
+          -1.399,
+          0.108
+        ],
+        [
+          -1.795,
+          -1.402,
+          0.478
+        ],
+        [
+          -1.79,
+          -1.405,
+          0.649
+        ],
+        [
+          -1.788,
+          -1.407,
+          0.655
+        ],
+        [
+          -1.789,
+          -1.408,
+          0.61
+        ],
+        [
+          -1.79,
+          -1.41,
+          0.576
+        ],
+        [
+          -1.792,
+          -1.412,
+          0.565
+        ],
+        [
+          -1.789,
+          -1.412,
+          0.585
+        ],
+        [
+          -1.68,
+          -1.407,
+          0.712
+        ],
+        [
+          -1.509,
+          -1.399,
+          0.837
+        ],
+        [
+          -1.378,
+          -1.393,
+          0.925
+        ],
+        [
+          -1.225,
+          -1.386,
+          1.038
+        ],
+        [
+          -1.093,
+          -1.379,
+          1.16
+        ],
+        [
+          -0.978,
+          -1.371,
+          1.295
+        ],
+        [
+          -0.901,
+          -1.366,
+          1.398
+        ],
+        [
+          -0.808,
+          -1.362,
+          1.489
+        ],
+        [
+          -0.699,
+          -1.357,
+          1.512
+        ],
+        [
+          -0.594,
+          -1.349,
+          1.515
+        ],
+        [
+          -0.474,
+          -1.343,
+          1.514
+        ],
+        [
+          -0.39,
+          -1.341,
+          1.519
+        ],
+        [
+          -0.374,
+          -1.34,
+          1.524
+        ],
+        [
+          -0.399,
+          -1.336,
+          1.526
+        ],
+        [
+          -0.43,
+          -1.334,
+          1.526
+        ],
+        [
+          -0.441,
+          -1.335,
+          1.523
+        ],
+        [
+          -0.43,
+          -1.338,
+          1.521
+        ],
+        [
+          -0.409,
+          -1.34,
+          1.52
+        ],
+        [
+          -0.387,
+          -1.34,
+          1.514
+        ],
+        [
+          -0.368,
+          -1.339,
+          1.51
+        ],
+        [
+          -0.359,
+          -1.339,
+          1.509
+        ],
+        [
+          -0.355,
+          -1.337,
+          1.508
+        ],
+        [
+          -0.359,
+          -1.334,
+          1.51
+        ],
+        [
+          -0.364,
+          -1.331,
+          1.513
+        ]
+      ],
+      "estimator_error_cm": 8.1,
+      "hover_true": [
+        -0.364,
+        -1.331,
+        1.513
+      ],
+      "target_error_cm": 20.0,
+      "passed": true,
+      "planner_source": "uav-vla",
+      "intent": "vision",
+      "cache_hit": false,
+      "grounding": "depth",
+      "llm_model": null,
+      "vlm_model": "gemini-3.6-flash",
+      "n_llm_calls": 0,
+      "n_vlm_calls": 1,
+      "n_model_attempts": 3,
+      "n_malformed": 2,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0001,
+      "t_goal_s": 0.0003,
+      "t_frame_s": 0.0024,
+      "t_object_search_s": 13.9651,
+      "t_actions_s": 0.0008,
+      "t_llm_plan_s": null,
+      "t_validate_s": 0.0002,
+      "t_plan_total_s": 13.9708,
+      "run_id": "20261021_112717",
+      "trial": 7,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 16,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case16_hover_at_the_end_of_the.mp4",
+      "still": "images/case16_hover_at_the_end_of_the.jpg",
+      "rerun": true
+    },
+    {
+      "id": 17,
+      "prompt": "Fly in a star pattern",
+      "kind": "shape",
+      "plan_latency_s": 0.06,
+      "accepted": true,
+      "mission_id": "6bcc445c4d99",
+      "reasoning": "[CODE] intent=shape | NeLV parser\u2192route\u2192path\u2192control",
+      "skills": [
+        "TAKEOFF",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO",
+        "MOVE_TO"
+      ],
+      "telemetry_mode": "full",
+      "status": "done",
+      "error": null,
+      "replans": 0,
+      "sim_time_s": 33.5,
+      "path_m": 9.03,
+      "path": [
+        [
+          -1.8,
+          -1.4,
+          0.012
+        ],
+        [
+          -1.797,
+          -1.402,
+          0.205
+        ],
+        [
+          -1.787,
+          -1.409,
+          0.544
+        ],
+        [
+          -1.781,
+          -1.413,
+          0.65
+        ],
+        [
+          -1.781,
+          -1.408,
+          0.612
+        ],
+        [
+          -1.787,
+          -1.403,
+          0.584
+        ],
+        [
+          -1.792,
+          -1.4,
+          0.576
+        ],
+        [
+          -1.712,
+          -1.357,
+          0.577
+        ],
+        [
+          -1.532,
+          -1.271,
+          0.577
+        ],
+        [
+          -1.361,
+          -1.189,
+          0.584
+        ],
+        [
+          -1.226,
+          -1.124,
+          0.589
+        ],
+        [
+          -1.104,
+          -1.064,
+          0.59
+        ],
+        [
+          -1.007,
+          -1.014,
+          0.589
+        ],
+        [
+          -0.911,
+          -0.964,
+          0.587
+        ],
+        [
+          -0.809,
+          -0.912,
+          0.586
+        ],
+        [
+          -0.671,
+          -0.845,
+          0.586
+        ],
+        [
+          -0.532,
+          -0.779,
+          0.591
+        ],
+        [
+          -0.403,
+          -0.716,
+          0.588
+        ],
+        [
+          -0.291,
+          -0.66,
+          0.588
+        ],
+        [
+          -0.146,
+          -0.589,
+          0.589
+        ],
+        [
+          -0.032,
+          -0.534,
+          0.589
+        ],
+        [
+          0.026,
+          -0.506,
+          0.589
+        ],
+        [
+          0.006,
+          -0.515,
+          0.588
+        ],
+        [
+          -0.017,
+          -0.517,
+          0.589
+        ],
+        [
+          0.026,
+          -0.373,
+          0.588
+        ],
+        [
+          0.094,
+          -0.192,
+          0.586
+        ],
+        [
+          0.147,
+          -0.077,
+          0.59
+        ],
+        [
+          0.157,
+          -0.085,
+          0.587
+        ],
+        [
+          0.148,
+          -0.136,
+          0.585
+        ],
+        [
+          0.139,
+          -0.186,
+          0.587
+        ],
+        [
+          0.134,
+          -0.213,
+          0.589
+        ],
+        [
+          0.133,
+          -0.22,
+          0.591
+        ],
+        [
+          0.239,
+          -0.207,
+          0.585
+        ],
+        [
+          0.422,
+          -0.185,
+          0.581
+        ],
+        [
+          0.612,
+          -0.163,
+          0.587
+        ],
+        [
+          0.642,
+          -0.156,
+          0.59
+        ],
+        [
+          0.597,
+          -0.158,
+          0.588
+        ],
+        [
+          0.539,
+          -0.163,
+          0.589
+        ],
+        [
+          0.495,
+          -0.165,
+          0.588
+        ],
+        [
+          0.481,
+          -0.164,
+          0.586
+        ],
+        [
+          0.481,
+          -0.158,
+          0.588
+        ],
+        [
+          0.369,
+          -0.061,
+          0.584
+        ],
+        [
+          0.227,
+          0.056,
+          0.584
+        ],
+        [
+          0.131,
+          0.134,
+          0.588
+        ],
+        [
+          0.137,
+          0.129,
+          0.588
+        ],
+        [
+          0.177,
+          0.096,
+          0.585
+        ],
+        [
+          0.216,
+          0.065,
+          0.588
+        ],
+        [
+          0.237,
+          0.048,
+          0.589
+        ],
+        [
+          0.247,
+          0.042,
+          0.589
+        ],
+        [
+          0.276,
+          0.14,
+          0.585
+        ],
+        [
+          0.314,
+          0.295,
+          0.581
+        ],
+        [
+          0.351,
+          0.467,
+          0.585
+        ],
+        [
+          0.363,
+          0.553,
+          0.589
+        ],
+        [
+          0.352,
+          0.533,
+          0.587
+        ],
+        [
+          0.333,
+          0.481,
+          0.587
+        ],
+        [
+          0.32,
+          0.436,
+          0.588
+        ],
+        [
+          0.313,
+          0.409,
+          0.589
+        ],
+        [
+          0.31,
+          0.398,
+          0.588
+        ],
+        [
+          0.211,
+          0.33,
+          0.584
+        ],
+        [
+          0.067,
+          0.235,
+          0.582
+        ],
+        [
+          -0.07,
+          0.15,
+          0.588
+        ],
+        [
+          -0.095,
+          0.14,
+          0.59
+        ],
+        [
+          -0.068,
+          0.162,
+          0.588
+        ],
+        [
+          -0.039,
+          0.216,
+          0.589
+        ],
+        [
+          -0.146,
+          0.342,
+          0.586
+        ],
+        [
+          -0.293,
+          0.472,
+          0.587
+        ],
+        [
+          -0.364,
+          0.517,
+          0.589
+        ],
+        [
+          -0.352,
+          0.486,
+          0.589
+        ],
+        [
+          -0.325,
+          0.447,
+          0.589
+        ],
+        [
+          -0.304,
+          0.413,
+          0.588
+        ],
+        [
+          -0.299,
+          0.401,
+          0.586
+        ],
+        [
+          -0.291,
+          0.37,
+          0.589
+        ],
+        [
+          -0.242,
+          0.214,
+          0.581
+        ],
+        [
+          -0.182,
+          0.034,
+          0.584
+        ],
+        [
+          -0.159,
+          -0.036,
+          0.59
+        ],
+        [
+          -0.169,
+          -0.012,
+          0.59
+        ],
+        [
+          -0.19,
+          0.042,
+          0.587
+        ],
+        [
+          -0.212,
+          0.089,
+          0.587
+        ],
+        [
+          -0.225,
+          0.108,
+          0.589
+        ],
+        [
+          -0.238,
+          0.106,
+          0.591
+        ],
+        [
+          -0.353,
+          -0.002,
+          0.584
+        ],
+        [
+          -0.515,
+          -0.162,
+          0.582
+        ],
+        [
+          -0.598,
+          -0.251,
+          0.588
+        ],
+        [
+          -0.592,
+          -0.256,
+          0.589
+        ],
+        [
+          -0.549,
+          -0.219,
+          0.587
+        ],
+        [
+          -0.512,
+          -0.181,
+          0.587
+        ],
+        [
+          -0.494,
+          -0.157,
+          0.587
+        ],
+        [
+          -0.495,
+          -0.149,
+          0.59
+        ],
+        [
+          -0.383,
+          -0.145,
+          0.584
+        ],
+        [
+          -0.214,
+          -0.144,
+          0.583
+        ],
+        [
+          -0.047,
+          -0.147,
+          0.59
+        ],
+        [
+          -0.027,
+          -0.152,
+          0.594
+        ],
+        [
+          -0.074,
+          -0.156,
+          0.592
+        ],
+        [
+          -0.109,
+          -0.186,
+          0.589
+        ],
+        [
+          -0.075,
+          -0.375,
+          0.581
+        ],
+        [
+          -0.02,
+          -0.56,
+          0.585
+        ],
+        [
+          0.01,
+          -0.641,
+          0.593
+        ],
+        [
+          0.009,
+          -0.621,
+          0.593
+        ]
+      ],
+      "passed": true,
+      "planner_source": "code",
+      "intent": "shape",
+      "cache_hit": false,
+      "grounding": null,
+      "llm_model": null,
+      "vlm_model": null,
+      "n_llm_calls": 0,
+      "n_vlm_calls": 0,
+      "n_model_attempts": 0,
+      "n_malformed": 0,
+      "validator_valid": true,
+      "validator_errors": null,
+      "validator_overridden": false,
+      "n_clipped": 0,
+      "replans_suppressed": 0,
+      "targets_lost": 0,
+      "first_replan_sim_t": null,
+      "t_intent_s": 0.0041,
+      "t_goal_s": null,
+      "t_frame_s": null,
+      "t_object_search_s": null,
+      "t_actions_s": null,
+      "t_llm_plan_s": 0.0047,
+      "t_validate_s": 0.0005,
+      "t_plan_total_s": 0.0095,
+      "run_id": "20261021_114007",
+      "trial": 1,
+      "seed": 0,
+      "scene": "scene_lab",
+      "mode": "full",
+      "scenario": 17,
+      "disturbance": "none",
+      "paraphrased": false,
+      "randomized": false,
+      "layout": null,
+      "returned_home": true,
+      "twin_restarted": false,
+      "video": "videos/case17_fly_in_a_star_pattern.mp4",
+      "still": "images/case17_fly_in_a_star_pattern.jpg",
+      "rerun": true
     }
   ]
 }
