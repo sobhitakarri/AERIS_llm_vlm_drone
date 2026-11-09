@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.api.routes import router, app_context
+from backend.planning import plan_cache
 from backend.planning.planner import MissionPlanner
 from backend.planning.safety_validator import SafetyValidator
 from backend.runtime.mission_executor import MissionExecutor
@@ -87,7 +88,8 @@ def _trace_step_completed(d: dict) -> None:
     trace.event("step_completed", step=d.get("step"), skill=d.get("skill"))
 
 
-def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool = False) -> FastAPI:
+def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool = False,
+               drone_uri: str = None) -> FastAPI:
     app = FastAPI(title=settings.app_name, version=settings.version)
 
     app.add_middleware(
@@ -112,7 +114,8 @@ def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool
     drone_mode = drone_mode or settings.drone_backend
     model_mode = model_mode or settings.llm_provider
 
-    drone, drone_mode = make_drone(drone_mode, launch_twin=launch_twin)
+    drone, drone_mode = make_drone(drone_mode, uri=drone_uri, launch_twin=launch_twin)
+    plan_cache.set_namespace("litewing" if drone_mode == "litewing" else "")
     drone.connect()
     is_twin = drone_mode == "twin"
     capabilities = capabilities_for(drone)
@@ -285,12 +288,14 @@ def create_app(drone_mode: str = None, model_mode: str = None, launch_twin: bool
         "stream_source": "twin" if is_twin else "webcam",
         "camera_view": "overhead" if is_twin else "pip",
         "drone_backend": drone_mode,
-        "drone_uri": settings.drone_uri,
+        "drone_uri": drone_uri or settings.drone_uri,
         "capabilities": capabilities,
         "last_mission": {},
     })
 
+    from backend.api.litewing_routes import router as litewing_router
     app.include_router(router)
+    app.include_router(litewing_router)
 
     # Serve Operator Dashboard Frontend Static Files
     frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))

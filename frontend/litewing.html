@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteWing Flight Console</title>
+    <meta name="description" content="Closed-loop LiteWing flight console: LLM instructions, dead-reckoning position hold, live plots.">
+    <link rel="stylesheet" href="css/litewing.css?v=1">
+</head>
+<body>
+<div class="lw">
+
+    <header class="bar">
+        <div class="brand"><b>LiteWing</b><span>flight console</span></div>
+
+        <div class="group">
+            <input id="uri" class="uri" value="udp://192.168.43.42" spellcheck="false" title="Drone link. sim://litewing runs the bench simulation (no drone)">
+            <button class="btn" id="btn-connect">Connect</button>
+        </div>
+
+        <div class="group">
+            <button class="btn go" id="btn-start" title="Take off, hold, land (the official Start Flight)">Start Flight</button>
+            <button class="btn info" id="btn-sensor" title="No motors. Carry the drone by hand and watch the sensors">Sensor Test</button>
+            <button class="btn warn" id="btn-battery">Reset Battery</button>
+        </div>
+
+        <div class="group checks">
+            <label><input type="checkbox" id="ck-log"> Log Sensor Test</label>
+            <label title="Motors off. Position and height are simulated from the commanded setpoints"><input type="checkbox" id="ck-debug" checked> Debug Mode</label>
+            <label><input type="checkbox" id="ck-csv"> CSV Logging</label>
+        </div>
+
+        <div class="group">
+            <button class="btn" data-open="dlg-leds">LEDs</button>
+            <button class="btn" data-open="dlg-params">Flight Parameters</button>
+            <button class="btn" data-open="dlg-pid">PID Tuning</button>
+            <button class="btn" data-open="dlg-joy">Joystick</button>
+            <button class="btn" data-open="dlg-log">Output Log</button>
+            <button class="btn" data-open="dlg-motor">Motor Test</button>
+        </div>
+
+        <div class="group right">
+            <button class="btn stop" id="btn-stop" title="Stop and land under control">STOP</button>
+            <button class="btn estop" id="btn-estop" title="Cut the motors now">E-STOP</button>
+        </div>
+    </header>
+
+    <div class="statusline">
+        <span class="chip" id="c-link"><i></i>Link <b id="v-link">-</b></span>
+        <span class="chip" id="c-mode"><i></i>Mode <b id="v-mode">-</b></span>
+        <span class="chip" id="c-ceil"><i></i>Ceiling <b id="v-ceil">30 cm</b></span>
+        <span class="chip" id="c-sens"><i></i>Sensors <b id="v-sens">-</b></span>
+        <span class="status" id="status">Status: Ready</span>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+
+    <main class="grid">
+        <aside class="col">
+            <section class="panel">
+                <h2>Instruction <span class="tag" id="model-tag"></span></h2>
+                <form id="cmd-form" autocomplete="off">
+                    <textarea id="cmd" rows="2" placeholder="Tell the drone what to do, e.g. fly a 0.4 m square"></textarea>
+                    <button class="btn primary" type="submit" id="cmd-send">Send</button>
+                </form>
+                <div class="prompts" id="prompts"></div>
+                <div class="notice" id="clips" hidden></div>
+            </section>
+
+            <section class="panel grow">
+                <h2>Plan <span class="tag" id="plan-src"></span></h2>
+                <p class="muted" id="reasoning">No instruction yet.</p>
+                <ol class="steps" id="steps"></ol>
+                <div class="progress"><div id="prog"></div></div>
+                <div class="muted small" id="mission-line">Mission: idle</div>
+            </section>
+
+            <section class="panel">
+                <h2>Controls</h2>
+                <div class="row">
+                    <label>Distance (m) <input id="dist" type="number" step="0.1" min="0.1" max="1" value="0.5"></label>
+                </div>
+                <div class="dpad">
+                    <span></span><button class="btn" data-fly="forward">&uarr;<small>Forward</small></button><span></span>
+                    <button class="btn" data-fly="left">&larr;<small>Left</small></button>
+                    <button class="btn stop" id="btn-stop2">STOP</button>
+                    <button class="btn" data-fly="right">&rarr;<small>Right</small></button>
+                    <span></span><button class="btn" data-fly="backward">&darr;<small>Backward</small></button><span></span>
+                </div>
+                <div class="row"><span class="muted">Shapes</span><button class="btn purple" data-fly="square">Square</button></div>
+            </section>
+
+            <section class="panel">
+                <h2>Events</h2>
+                <div class="events" id="events"></div>
+            </section>
+        </aside>
+
+        <section class="col wide">
+            <section class="panel">
+                <h2>Real-Time Values</h2>
+                <div class="values" id="values"></div>
+            </section>
+            <div class="plots">
+                <section class="panel plot"><h3>Velocities (m/s)</h3><canvas id="p-vel"></canvas></section>
+                <section class="panel plot"><h3>Integrated Position</h3><canvas id="p-pos"></canvas></section>
+                <section class="panel plot"><h3>Control Corrections</h3><canvas id="p-corr"></canvas></section>
+                <section class="panel plot"><h3>Height</h3><canvas id="p-h"></canvas></section>
+            </div>
+            <div class="tools">
+                <button class="btn" id="btn-clear">Clear Graphs</button>
+                <button class="btn" id="btn-table">Table view</button>
+            </div>
+            <div class="table-wrap" id="table-wrap" hidden></div>
+        </section>
+    </main>
+</div>
+
+<!-- Flight parameters -->
+<dialog id="dlg-params"><form method="dialog" class="dlg">
+    <header><h2>Flight Control Parameters</h2><button class="x" value="close">&times;</button></header>
+    <div class="fields" id="f-params"></div>
+    <footer>
+        <button type="button" class="btn primary" data-apply="params">Apply All Values</button>
+        <button type="button" class="btn" data-reset="1">Reset to Default</button>
+    </footer>
+    <p class="muted small">Target height can never exceed 30 cm. Out-of-range values are clamped and reported in the Output Log.</p>
+</form></dialog>
+
+<!-- PID -->
+<dialog id="dlg-pid"><form method="dialog" class="dlg">
+    <header><h2>PID Tuning Controls</h2><button class="x" value="close">&times;</button></header>
+    <h3>Position PID</h3><div class="fields" id="f-pos"></div>
+    <h3>Velocity PID</h3><div class="fields" id="f-vel"></div>
+    <h3>TRIM Controls <small>(Forward/Back, Left/Right)</small></h3><div class="fields" id="f-trim"></div>
+    <h3>Optical Flow Scaling <small>(increase if the trajectory is too small)</small></h3><div class="fields" id="f-flow"></div>
+    <h3>Calibrate from a measured distance</h3>
+    <p class="muted small">Start Sensor Test, hold the drone 10 to 15 cm above a textured surface, slide it a measured distance in a straight line (e.g. 0.5 m along a ruler), then enter that distance and press Calibrate. Repeat once to check: Position should now read the true distance.</p>
+    <div class="row">
+        <label>Distance moved (m) <input id="cal-dist" type="number" step="0.05" min="0.1" max="3" value="0.5"></label>
+        <button type="button" class="btn info" id="cal-btn">Calibrate</button>
+    </div>
+    <footer>
+        <button type="button" class="btn primary" data-apply="pid">Apply PID Values</button>
+        <button type="button" class="btn" data-reset="1">Reset to Default</button>
+    </footer>
+</form></dialog>
+
+<!-- LEDs -->
+<dialog id="dlg-leds"><form method="dialog" class="dlg">
+    <header><h2>NeoPixel LEDs</h2><button class="x" value="close">&times;</button></header>
+    <div class="fields">
+        <label>R <input id="led-r" type="number" min="0" max="255" value="255"></label>
+        <label>G <input id="led-g" type="number" min="0" max="255" value="255"></label>
+        <label>B <input id="led-b" type="number" min="0" max="255" value="255"></label>
+        <input id="led-pick" type="color" value="#ffffff" aria-label="Colour picker">
+    </div>
+    <footer>
+        <button type="button" class="btn primary" data-led="set">Set Color</button>
+        <button type="button" class="btn warn" data-led="blink">Blink LEDs</button>
+        <button type="button" class="btn" data-led="stop_blink">Stop Blinking</button>
+        <button type="button" class="btn" data-led="clear">Clear LEDs</button>
+    </footer>
+</form></dialog>
+
+<!-- Joystick -->
+<dialog id="dlg-joy"><form method="dialog" class="dlg">
+    <header><h2>Joystick Control</h2><button class="x" value="close">&times;</button></header>
+    <div class="row"><label>Sensitivity <input id="joy-sens" type="number" step="0.1" min="0.1" max="2" value="0.2"></label>
+        <span class="muted small">(0.1-2.0)</span></div>
+    <div class="dpad joy">
+        <span></span><button type="button" class="btn go" data-key="w">&uarr;<small>W</small></button><span></span>
+        <button type="button" class="btn go" data-key="a">&larr;<small>A</small></button>
+        <button type="button" class="btn stop" id="joy-stop">STOP</button>
+        <button type="button" class="btn go" data-key="d">&rarr;<small>D</small></button>
+        <span></span><button type="button" class="btn go" data-key="s">&darr;<small>S</small></button><span></span>
+    </div>
+    <label class="row"><input type="checkbox" id="joy-origin" checked> Hold at Origin (uncheck to hold at current position)</label>
+    <footer>
+        <button type="button" class="btn go" id="joy-start">Start Joystick</button>
+    </footer>
+    <p class="muted small">Hold W/A/S/D (or the buttons). The setpoint never runs more than 25 cm ahead of the drone.</p>
+</form></dialog>
+
+<!-- Motor test -->
+<dialog id="dlg-motor"><form method="dialog" class="dlg">
+    <header><h2>Motor Test (ground, no flight)</h2><button class="x" value="close">&times;</button></header>
+    <p class="muted small">Spins all four motors together at a low thrust for a few seconds. Raw thrust goes through the firmware's command watchdog, so the motors stop within 0.5 s if the link drops. Individual motors cannot be isolated this way: with props off, listen and look to see which one does not turn.</p>
+    <div class="fields">
+        <label><span>Thrust (%)</span><input id="mt-pct" type="number" min="1" max="15" step="1" value="8"></label>
+        <label><span>Duration (s)</span><input id="mt-sec" type="number" min="0.5" max="3" step="0.5" value="1.5"></label>
+    </div>
+    <label class="row"><input type="checkbox" id="mt-ok"> <b>The drone is on a flat surface and the area is clear.</b> Propellers removed is safest; if they are fitted, keep hands away.</label>
+    <label class="row"><input type="checkbox" id="mt-props"> Propellers are fitted</label>
+    <p class="muted small">Needs Debug Mode unticked (debug never sends a motor command). Thrust max 15 %, max 3 s: it cannot lift the drone. STOP or E-STOP ends it at once.</p>
+    <div class="muted small" id="mt-result">No test run yet.</div>
+    <footer>
+        <button type="button" class="btn stop" id="mt-run">Run Thrust Test</button>
+        <button type="button" class="btn info" id="mt-prop" title="The firmware's own self-test: pulses each motor ~50 ms and measures vibration">Propeller Self-Test (per-motor feedback)</button>
+    </footer>
+</form></dialog>
+
+<!-- Output log -->
+<dialog id="dlg-log"><form method="dialog" class="dlg wide">
+    <header><h2>Output Log</h2><button class="x" value="close">&times;</button></header>
+    <pre class="outlog" id="outlog"></pre>
+    <footer>
+        <button type="button" class="btn" id="log-clear">Clear Output</button>
+        <button type="button" class="btn" id="log-save">Save</button>
+    </footer>
+</form></dialog>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="js/litewing.js?v=1"></script>
+</body>
+</html>

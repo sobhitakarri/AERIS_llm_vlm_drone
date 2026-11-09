@@ -42,6 +42,47 @@ hover above it*.
 | `real` | LiteWing over Wi-Fi |
 | `sim` | Kinematic stand-in with no physics and no cameras, for exercising planning and the dashboard without MATLAB |
 
+## Real LiteWing: LLM-driven flight with the positioning module
+
+The `real` backend flies a LiteWing with the Flight Positioning Module
+(PMW3901 optical flow + VL53L1X ToF) the way Circuit-Digest's
+[dead-reckoning-maneuvers.py](https://github.com/Circuit-Digest/LiteWing/tree/main/Python-Scripts/Flight_Positioning_Module)
+does: flow velocity integrated to a position, a position PID plus a
+velocity-damping PID at 50 Hz, sent as hover setpoints. The difference is who
+gives the orders: a sentence goes through LLM -> skills -> safety validator ->
+executor, and plans are cached (under their own `litewing` namespace, so the
+twin's 1 m shapes are never replayed on a 0.5 m vehicle).
+
+```bash
+python -m backend.main --drone real --backend gemini                  # udp://192.168.43.42
+python -m backend.main --drone real --uri sim://litewing --backend gemini   # bench simulation, no drone
+```
+
+Open http://127.0.0.1:8000 and press **LiteWing console** (or `/litewing.html`):
+the official GUI rebuilt on the web (real-time values, velocity / position /
+correction / height plots, PID tuning, flight parameters, NeoPixel LEDs,
+joystick, sensor test, CSV logging, output log) plus an instruction box.
+Try *take off to 0.5 m*, *fly a 0.4 m square*, *move forward 0.3 m*, *land*.
+
+Safety, applied below the planner so no plan, LLM or dashboard value can lift it:
+
+* height is clamped to **0.30 m** on every setpoint; "0.5 m high" is flown at
+  0.30 m and the console says so;
+* flight area is +-1 m from the take-off point, speed capped at 0.4 m/s;
+* stale sensor data (0.3 s), tilt over 50 deg, a ceiling breach, battery under
+  3.0 V, or a lost link end in a controlled landing; take-off is refused on a
+  low battery or a ToF that does not read "on the ground";
+* **debug mode is on by default on real hardware**: no motor command is sent
+  and the motion is simulated from the commanded setpoints. Untick it in the
+  console to fly;
+* STOP lands under control, E-STOP cuts the motors; with no new command the
+  drone holds position and lands after `idle_hold_s` (30 s).
+
+Not yet flown on hardware: the cflib link (`backend/drone/litewing_link.py`)
+is untested against a real LiteWing, and the PID gains are the official
+defaults, not tuned to this airframe. Start with debug mode, then the sensor
+test, then a tethered hover.
+
 ## The twin
 
 | Room camera | What perception sees | Overhead depth |

@@ -69,7 +69,9 @@ Rules:
 - Geometric paths: YOU choose vertices that match the request, then close the loop. Stay inside the workspace.
 - "inspect/find <object>": FIND or INSPECT that target, MOVE_TO a safe hover near it (about 0.4 m away), HOVER.
 - "land" / "come down": LAND. "go home": RETURN.
-- Never command coordinates outside the workspace.
+- Never command coordinates outside the workspace. z_max is a hard ceiling: if the operator asks for a
+  greater height, use z_max (it is applied anyway). Small vehicles fly small shapes: when no size is
+  given, keep a shape about 0.5 m across.
 - reasoning: one or two sentences of why this skill list matches the command.
 
 Operator command: "{raw_command}"
@@ -78,7 +80,7 @@ Return JSON only:
 {{
   "reasoning": "why this sequence",
   "skills": [
-    {{"skill": "TAKEOFF", "params": {{"z": 1.0}}}}
+    {{"skill": "TAKEOFF", "params": {{"z": {ws.z_max}}}}}
   ]
 }}
 """

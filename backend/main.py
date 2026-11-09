@@ -19,10 +19,13 @@ def main():
                              "'qwen'/'qwen25'/'local' = offline split (Qwen2-VL-2B for VLM + Qwen2.5-3B for planning). "
                              "'gemini' = Gemini Flash API.")
     parser.add_argument("--drone", type=str, default="sim",
-                        choices=["twin", "sim", "real"],
+                        choices=["twin", "sim", "real", "litewing"],
                         help="Drone execution target. 'twin' = Simulink/Simscape/Unreal digital twin "
                              "(start it in MATLAB with run_aeris_twin). 'sim' = kinematic stand-in, no physics. "
                              "'real' = LiteWing over Wi-Fi.")
+    parser.add_argument("--uri", type=str, default=None,
+                        help="With --drone real: the LiteWing link, default udp://192.168.43.42. "
+                             "'sim://litewing' flies the bench simulation of the same stack, no drone needed.")
     parser.add_argument("--launch-twin", action="store_true",
                         help="With --drone twin: start MATLAB and the twin if it is not already running.")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address")
@@ -38,7 +41,8 @@ def main():
             logger.warning("Put the key in .env (not only .env.example). Get one at https://aistudio.google.com/apikey")
         else:
             logger.info(f"GEMINI_API_KEY loaded from .env ({len(key)} chars).")
-    app = create_app(drone_mode=args.drone, model_mode=args.backend, launch_twin=args.launch_twin)
+    app = create_app(drone_mode=args.drone, model_mode=args.backend, launch_twin=args.launch_twin,
+                     drone_uri=args.uri)
 
     uvicorn.run(app, host=args.host, port=args.port)
 

@@ -37,14 +37,33 @@ def save_store(store: Dict[str, Any]) -> None:
     path.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
+# A vehicle with its own flight envelope (the LiteWing) keeps its own plans:
+# "fly a square" cached from a 1 m twin run must not be replayed on a 0.5 m
+# vehicle. The empty namespace is the original, shared one.
+_namespace = ""
+
+
+def set_namespace(name: str) -> None:
+    global _namespace
+    _namespace = (name or "").strip().lower()
+
+
+def get_namespace() -> str:
+    return _namespace
+
+
+def _k(key: str) -> str:
+    return f"{_namespace}|{key}" if _namespace else key
+
+
 def lookup(command: str) -> Optional[Dict[str, Any]]:
     store = load_store()
-    key = normalize_command(command)
+    key = _k(normalize_command(command))
     if key in store["exact"]:
         hit = store["exact"][key]
         hit["hit"] = "exact"
         return hit
-    tmpl = template_key(command)
+    tmpl = _k(template_key(command))
     if tmpl in store["templates"]:
         hit = _fill_template(store["templates"][tmpl], command)
         if hit:
@@ -79,9 +98,9 @@ def store_entry(
         "response": response_payload,
         "skills": serialized,
     }
-    store["exact"][normalize_command(command)] = rec
+    store["exact"][_k(normalize_command(command))] = rec
     if allow_template:
-        store["templates"][template_key(command)] = rec
+        store["templates"][_k(template_key(command))] = rec
     save_store(store)
 
 

@@ -44,7 +44,7 @@ class SafetyValidator:
 
             # 2. Geofence & Bounding Checks
             if skill_name == "TAKEOFF":
-                z = params.get("z", 1.0)
+                z = params.get("z", min(1.0, bounds.z_max))
                 cur_z = z
                 if not (bounds.z_min <= z <= bounds.z_max):
                     errors.append(f"Step {i+1}: TAKEOFF altitude {z}m violates bounds [{bounds.z_min}, {bounds.z_max}]m.")

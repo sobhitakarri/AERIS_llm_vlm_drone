@@ -27,7 +27,7 @@ TRIM_VY = -0.02
 MAX_HOLD_CORR = 0.10
 MAX_NAV_CORR = 0.40
 MIN_HOVER_Z = 0.20
-MAX_HOVER_Z = 0.80
+MAX_HOVER_Z = 0.30   # hard ceiling (see litewing_flight.HARD_MAX_Z)
 
 
 def clamp(value: float, lo: float, hi: float) -> float:

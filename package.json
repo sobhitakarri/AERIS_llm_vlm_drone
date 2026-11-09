@@ -1,0 +1,20 @@
+{
+  "name": "project_phase1",
+  "version": "1.0.0",
+  "description": "A closed-loop framework that turns a natural-language instruction into a validated sequence of drone skills, finds the objects it refers to with a vision-language model, grounds them in metres, flies there, and replans when the scene changes. The target vehicle is a LiteWing ESP32-S3 micro-quadrotor; development and evaluation run against a Simulink / Simscape Multibody / Unreal digital twin.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sobhitakarri/AERIS_llm_vlm_drone.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sobhitakarri/AERIS_llm_vlm_drone/issues"
+  },
+  "homepage": "https://github.com/sobhitakarri/AERIS_llm_vlm_drone#readme"
+}

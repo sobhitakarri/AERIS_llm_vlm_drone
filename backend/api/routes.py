@@ -223,6 +223,8 @@ async def set_drone_config(req: DroneConfigRequest):
             logger.warning(f"Error disconnecting previous drone: {e}")
 
     new_drone, backend = make_drone(req.drone_backend, uri=uri)
+    from backend.planning import plan_cache
+    plan_cache.set_namespace("litewing" if backend == "litewing" else "")
     connected = bool(new_drone.connect())
     error_msg = None
     if not connected:
@@ -425,7 +427,10 @@ def _pose_context() -> dict:
         st = drone.get_state()
         pose = {"x": st.x, "y": st.y, "z": st.z, "yaw": st.yaw}
     state_mgr = app_context.get("state_manager")
-    return {"pose": pose, "objects": state_mgr.objects_as_context() if state_mgr else []}
+    ctx = {"pose": pose, "objects": state_mgr.objects_as_context() if state_mgr else []}
+    if drone is not None and hasattr(drone, "envelope"):
+        ctx["envelope"] = drone.envelope()
+    return ctx
 
 
 def _scene_frame():
@@ -592,6 +597,18 @@ async def submit_command(req: CommandRequest):
                 "mission_id": (tr or {}).get("id"), "run_mode": mode.name}
 
     mission_trace = trace.current()
+    # Anything the envelope cut back, so the operator sees "0.5 m -> 0.30 m"
+    # and not a silently different request.
+    clips = []
+    for ev in (mission_trace.events if mission_trace else []):
+        if ev.get("kind") == "workspace_clip":
+            clips.append({k: ev.get(k) for k in ("skill", "param", "requested", "clipped")})
+    seen = set()
+    for c in clips:
+        key = (c["param"], c["requested"], c["clipped"])
+        if key not in seen:
+            seen.add(key)
+            log_event(f"Limited {c['param']} {c['requested']} -> {c['clipped']} (vehicle envelope)", "info")
 
     async def _run_mission_async(valid_plan):
         try:
@@ -620,11 +637,12 @@ async def submit_command(req: CommandRequest):
     # mission, whichever client started it.
     app_context["last_plan"] = {
         "id": time.time(), "command": req.command, "reasoning": plan.reasoning,
-        "source": plan.source, "skills": [s.model_dump() for s in plan.skills],
+        "source": plan.source, "skills": [s.model_dump() for s in plan.skills], "clips": clips,
     }
 
     return {
         "success": True,
+        "clips": clips,
         "mission_id": mission_id,
         "run_mode": mode.name,
         "validated": bool(trace.snapshot() and trace.snapshot()["validation"].get("valid")),

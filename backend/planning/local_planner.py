@@ -1,6 +1,7 @@
 """Deterministic skill plans for intents that do not need an LLM."""
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from backend.planning.intent_router import ParsedIntent, parse_intent
@@ -13,6 +14,29 @@ from backend.schemas.mission import SkillPrimitive
 _DEFAULT_ALTITUDE_M = 0.6
 
 
+_SIZE = re.compile(r"(\d+(?:\.\d+)?)\s*(cm|centimet\w*|m|met\w*)\b")
+
+
+def _shape_size(intent: ParsedIntent, env: Dict[str, Any]) -> float:
+    """Width of the shape's bounding box in metres: a length in the command
+    that is not the flight height, else the vehicle's default."""
+    z = intent.slots.get("z")
+    for num, unit in _SIZE.findall(intent.normalized):
+        metres = float(num) / 100.0 if unit.startswith("c") else float(num)
+        if z is not None and abs(metres - float(z)) < 1e-6:
+            continue                              # that one was the height
+        if 0.1 <= metres <= 1.0:
+            return metres
+    return float(env["shape_size"])
+
+
+def _fit_to_box(corners: List[tuple], size: float) -> List[tuple]:
+    """Scale a shape about the origin so it fits a size x size box."""
+    extent = max((max(abs(x), abs(y)) for x, y in corners), default=0.0) or 1.0
+    k = (size / 2.0) / extent
+    return [(x * k, y * k) for x, y in corners]
+
+
 def local_plan(command: str, context: Dict[str, Any] | None = None) -> List[SkillPrimitive]:
     intent = parse_intent(command, context)
     return plan_from_intent(intent, context)
@@ -21,12 +45,16 @@ def local_plan(command: str, context: Dict[str, Any] | None = None) -> List[Skil
 def plan_from_intent(intent: ParsedIntent, context: Dict[str, Any] | None = None) -> List[SkillPrimitive]:
     ctx = context or {}
     pose = ctx.get("pose") or {}
+    # A vehicle with a small flight envelope (the LiteWing: 0.30 m ceiling,
+    # shapes about 0.5 m across) publishes it; without one nothing changes.
+    env = ctx.get("envelope") or {}
+    z_lo, z_hi = float(env.get("z_min", 0.2)), float(env.get("z_max", 1.5))
     if "z" in intent.slots:
         want = float(intent.slots["z"])
     else:
         here = float(pose.get("z", 0.0) or 0.0)
-        want = here if here > 0.2 else _DEFAULT_ALTITUDE_M
-    z = max(0.2, min(1.5, want))
+        want = here if here > 0.2 else float(env.get("default_z", _DEFAULT_ALTITUDE_M))
+    z = max(z_lo, min(z_hi, want))
     if z != want and "z" in intent.slots:
         from backend.core import trace
         trace.event("workspace_clip", skill="code-planner", param="z", requested=round(want, 3), clipped=z)
@@ -62,14 +90,20 @@ def plan_from_intent(intent: ParsedIntent, context: Dict[str, Any] | None = None
     if intent.intent == "rotate":
         return [SkillPrimitive(skill="ROTATE", params={"angle": float(intent.slots.get("angle", 90.0))})]
     if intent.intent == "circle":
-        r = float(intent.slots.get("radius", 0.4))
-        r = max(0.2, min(0.8, r))
+        if env.get("shape_size"):
+            r = float(intent.slots.get("radius", _shape_size(intent, env) / 2.0))
+            r = max(0.1, min(0.45, r))
+        else:
+            r = float(intent.slots.get("radius", 0.4))
+            r = max(0.2, min(0.8, r))
         skills = [SkillPrimitive(skill="TAKEOFF", params={"z": z, "speed": 0.4})]
         skills.append(SkillPrimitive(skill="CIRCLE", params={"target": "center", "radius": r}))
         return skills
     if intent.intent == "shape":
         name = intent.shape or parse_shape_name(intent.normalized)
         corners = shape_corners(name)
+        if env.get("shape_size"):
+            corners = _fit_to_box(corners, _shape_size(intent, env))
         skills = [SkillPrimitive(skill="TAKEOFF", params={"z": z, "speed": 0.4})]
         skills.extend(closed_move_skills(z, corners))
         if "land" in intent.normalized:

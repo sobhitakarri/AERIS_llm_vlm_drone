@@ -34,6 +34,6 @@ def test_hover_xy_axis_swap():
 
 
 def test_clamp_hover_z():
-    assert clamp_hover_z(1.5) == 0.8
+    assert clamp_hover_z(1.5) == 0.30
     assert clamp_hover_z(0.05) == 0.2
-    assert abs(clamp_hover_z(0.4) - 0.4) < 1e-9
+    assert abs(clamp_hover_z(0.25) - 0.25) < 1e-9
