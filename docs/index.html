@@ -164,7 +164,7 @@
         </div>
 
         <h2 class="subtitle has-text-centered">
-          <strong>Zero-shot language-guided micro-quadrotor flight.</strong> AERIS translates natural language instructions into safe, depth-verified 3D flight paths without task-specific training. By projecting metric depth into physical object proposals, AERIS eliminates the fatal floor-hallucination failure of 2D Vision-Language Models, validated on a 45g LiteWing nano-quadrotor and a high-fidelity Simscape Multibody digital twin.
+          <strong>Zero-shot language-guided micro-quadrotor flight &amp; multi-gate visual reasoning.</strong> AERIS translates natural language instructions into safe, depth-verified 3D trajectories and semantic maneuvers without task-specific training. Validated across 16 language-grounded target hover missions and 6 visual-reasoning multi-gate traversals on a 45g LiteWing nano-quadrotor and a high-fidelity Simscape Multibody digital twin.
         </h2>
 
       </div>
@@ -292,6 +292,29 @@
         </div>
         <p>
           The active trajectory is interrupted, an updated smooth path is interpolated within 0.4 seconds, and the quadrotor converges to the relocated goal (evaluated in Case 09, where a 36 cm mid-hover target shift is successfully tracked with 5.0 cm final accuracy).
+        </p>
+
+        <!-- Subsection 5: Multi-Gate Visual Reasoning & Onboard Geometry -->
+        <h3 class="title is-4" style="margin-top: 2.2rem;">
+          5. Language-Guided Multi-Gate Traversal via Onboard Camera Geometry
+        </h3>
+        <p>
+          Beyond overhead floor-plane navigation, AERIS supports egocentric multi-gate traversal (e.g. <i>"fly through the gate with the dog"</i>, <i>"move towards the gate with the number equal to 2+4"</i>). In this mode, the onboard forward-facing camera ($I_{\text{fpv}}$) captures a row of gates, where each gate comprises a framed picture on top, an identifying geometric shape, and an opening beneath ($Z_{\text{open}} = 0.525\text{ m}$).
+        </p>
+        <p>
+          A single VLM query examines the candidate gates from left to right, executes semantic or arithmetic reasoning over their pictures (e.g., evaluating $2+4=6$, distinguishing healthy fruit salad from fast food, or recognizing Tux the Linux penguin), and returns a tight 2D bounding box $B_{\text{gate}}$ around the target picture. The 3D metric coordinate of the gate is then triangulated purely from pinhole camera geometry:
+        </p>
+        <div class="math-block">
+          $$t_{\text{width}} = \frac{f_x \cdot W_{\text{spec}}}{(u_1 - u_0) \cdot (\hat{\bm{r}} \cdot \hat{\bm{a}})}, \quad t_{\text{height}} = \frac{Z_{\text{center}} - Z_{\text{origin}}}{\hat{\bm{r}}_z}, \quad t = 0.25 \, t_{\text{width}} + 0.75 \, t_{\text{height}}$$
+        </div>
+        <p>
+          where $W_{\text{spec}} = 0.50\text{ m}$ is the standardized picture width, $\hat{\bm{r}}$ is the viewing ray vector, and $\hat{\bm{a}}$ is the optical axis. The planner synthesizes a collision-free traversal sequence:
+        </p>
+        <div class="math-block">
+          $$\bm{p}_{\text{approach}} = \bm{p}_{\text{gate}} - \bm{d} \cdot 0.75\text{m} \;\longrightarrow\; \bm{p}_{\text{open}} = \bm{p}_{\text{gate}} (z=0.525\text{m}) \;\longrightarrow\; \bm{p}_{\text{exit}} = \bm{p}_{\text{gate}} + \bm{d} \cdot 0.85\text{m}$$
+        </div>
+        <p>
+          This achieves smooth, high-precision flight through the gate opening without needing ground-truth gate coordinates.
         </p>
 
       </div>
@@ -480,6 +503,74 @@
           <p style="font-size: 0.8rem; color: #666;">* Indicates stand-off distance error relative to 0.50 m perimeter.</p>
         </div>
 
+        <!-- Table 3: Gate Navigation Benchmark Summary -->
+        <h4 class="title is-5" style="margin-top: 2rem; color: #111;">Table 3: Multi-Gate Visual Reasoning &amp; Traversal Benchmark</h4>
+        <div class="table-container">
+          <table class="table academic-table is-fullwidth">
+            <thead>
+              <tr>
+                <th>Gate ID</th>
+                <th>Instruction Prompt &ell;</th>
+                <th>Visual Candidate Recognized</th>
+                <th>Reasoning Category</th>
+                <th>VLM Latency</th>
+                <th>Traversal Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Gate 1</td>
+                <td>&ldquo;Fly through the gate with the dog&rdquo;</td>
+                <td>Black dog wearing green collar</td>
+                <td>Entity Identification</td>
+                <td>85.1 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+              <tr>
+                <td>Gate 2</td>
+                <td>&ldquo;Go to the Linux penguin gate&rdquo;</td>
+                <td>Linux penguin (Tux mascot)</td>
+                <td>Icon &amp; Mascot Recognition</td>
+                <td>5.3 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+              <tr>
+                <td>Gate 3</td>
+                <td>&ldquo;Go to the healthy food gate&rdquo;</td>
+                <td>Fruit salad (vs. burger, pizza)</td>
+                <td>Nutritional &amp; Semantic Reasoning</td>
+                <td>19.7 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+              <tr>
+                <td>Gate 4</td>
+                <td>&ldquo;Move towards the gate with the number equal to 2+4&rdquo;</td>
+                <td>Number 6 (digit 6 on blue circle)</td>
+                <td>Arithmetic Reasoning (2 + 4 = 6)</td>
+                <td>82.7 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+              <tr>
+                <td>Gate 5</td>
+                <td>&ldquo;Fly through the gate with the Mona Lisa painting&rdquo;</td>
+                <td>Mona Lisa painting (da Vinci)</td>
+                <td>Cultural &amp; Fine Art Recognition</td>
+                <td>25.9 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+              <tr>
+                <td>Gate 6</td>
+                <td>&ldquo;Reach the gate with the cowboy&rdquo;</td>
+                <td>Cowboy riding a horse</td>
+                <td>Pose &amp; Action Recognition</td>
+                <td>4.5 s</td>
+                <td class="bold">PASS (Traversed)</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size: 0.85rem; color: #111; font-weight: 600;">Overall Multi-Gate Visual Reasoning Success: 6 / 6 (100% Passed through opening without collision)</p>
+        </div>
+
         <!-- Benchmark Error Figure -->
         <div class="has-text-centered card-container" style="margin-top: 2rem;">
           <img src="assets/img/benchmark_errors.png" alt="Benchmark Errors Plot" style="max-width: 100%; height: auto;">
@@ -590,6 +681,148 @@
             <div class="qualitative-meta">
               <span>CASE 17 &bull; PASS</span>
               <span>PATH: 9.03 m &bull; 33.5 s</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================== NEW GATE OUTPUTS: MULTI-GATE VISUAL REASONING ==================== -->
+      <h3 class="title is-4" style="margin-top: 3.5rem; margin-bottom: 0.75rem;">Multi-Gate Visual Reasoning &amp; Traversal Demos</h3>
+      <p class="content" style="color: #555555; margin-bottom: 1.5rem;">
+        Onboard forward camera view (left) showing VLM identification of target pictures, paired with real-time flight execution through the gate opening (right).
+      </p>
+
+      <div class="qualitative-grid">
+
+        <!-- Gate 4: Arithmetic -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate4_move_towards_the_gate_with_the_number_eq_view.jpg" alt="Onboard Camera: Numbers 3, 9, 6" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate4_move_towards_the_gate_with_the_number_eq.gif" alt="Traversing Gate 6 Opening" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Move towards the gate with the number equal to 2+4&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Arithmetic Reasoning:</b> Evaluates $2 + 4 = 6$, rejects gates with 3 and 9, identifies blue circle containing number 6, triangulates 3D opening, and flies through with zero collision.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 4 &bull; ARITHMETIC</span>
+              <span>SUM: 2+4=6 &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 3: Healthy Food -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate3_go_to_the_healthy_food_gate_view.jpg" alt="Onboard Camera: Burger, Pizza, Fruit Salad" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate3_go_to_the_healthy_food_gate.gif" alt="Traversing Fruit Salad Gate" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Go to the healthy food gate&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Semantic Classification:</b> Compares burger, pizza, and fruit salad; reasons that fruit salad is the healthy choice, locates gate coordinates, and safely navigates through.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 3 &bull; SEMANTIC</span>
+              <span>FRUIT SALAD &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 2: Linux Tux -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate2_go_to_the_linux_penguin_gate_view.jpg" alt="Onboard Camera: Linux Penguin" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate2_go_to_the_linux_penguin_gate.gif" alt="Traversing Tux Gate" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Go to the Linux penguin gate&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Iconic Recognition:</b> Identifies Tux the Linux mascot among OS symbols, aligns forward heading, approaches at 0.4 m/s, and passes cleanly through the portal.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 2 &bull; MASCOT</span>
+              <span>TUX PENGUIN &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 5: Mona Lisa -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate5_fly_through_the_gate_with_the_mona_lisa_view.jpg" alt="Onboard Camera: Mona Lisa" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate5_fly_through_the_gate_with_the_mona_lisa.gif" alt="Traversing Mona Lisa Gate" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Fly through the gate with the Mona Lisa painting&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Art Identification:</b> Detects Leonardo da Vinci's masterpiece at index 0, computes metric depth from framed 0.50m canvas, and guides the quadrotor through the aperture.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 5 &bull; FINE ART</span>
+              <span>MONA LISA &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 1: Dog -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate1_fly_through_the_gate_with_the_dog_view.jpg" alt="Onboard Camera: Dog with green collar" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate1_fly_through_the_gate_with_the_dog.gif" alt="Traversing Dog Gate" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Fly through the gate with the dog&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Entity Recognition:</b> Distinguishes canine with green collar on leftmost gate, routes smooth approach to 0.75m standoff, enters opening at 0.3 m/s, and hovers at exit.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 1 &bull; ENTITY</span>
+              <span>BLACK DOG &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 6: Cowboy -->
+        <div class="qualitative-card">
+          <div class="columns is-gapless" style="margin:0;">
+            <div class="column is-6">
+              <img src="assets/gates/gate6_reach_the_gate_with_the_cowboy_view.jpg" alt="Onboard Camera: Cowboy on horse" style="height: 100%; object-fit: cover;">
+            </div>
+            <div class="column is-6">
+              <img src="assets/gates/gate6_reach_the_gate_with_the_cowboy.gif" alt="Traversing Cowboy Gate" style="height: 100%; object-fit: cover;">
+            </div>
+          </div>
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Reach the gate with the cowboy&rdquo;</div>
+            <div class="qualitative-card-desc">
+              <b>Action Recognition:</b> Selects middle portal depicting a cowboy riding a horse, interpolates 3-waypoint sequence, and crosses threshold with zero lateral deviation.
+            </div>
+            <div class="qualitative-meta">
+              <span>GATE 6 &bull; ACTION</span>
+              <span>COWBOY ON HORSE &bull; PASS</span>
             </div>
           </div>
         </div>
