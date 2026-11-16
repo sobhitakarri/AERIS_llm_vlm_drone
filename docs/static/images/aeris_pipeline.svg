@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 580" width="100%" height="100%" style="font-family: 'Google Sans', 'Noto Sans', sans-serif; background: #ffffff;">
+  <defs>
+    <!-- Arrowhead markers -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#222222" />
+    </marker>
+    <marker id="arrow-dashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#555555" />
+    </marker>
+    <!-- Drop shadow for subtle paper feel -->
+    <filter id="box-shadow" x="-5%" y="-10%" width="110%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+
+  <!-- ==================== BACKGROUND & SWIMLANES ==================== -->
+  
+  <!-- Outer Frame -->
+  <rect x="10" y="10" width="1080" height="560" rx="6" fill="#ffffff" stroke="#222222" stroke-width="1.5" />
+
+  <!-- Layer 1 Swimlane: Task Layer -->
+  <rect x="25" y="25" width="1050" height="150" rx="4" fill="#fafafa" stroke="#d0d0d0" stroke-width="1" />
+  <rect x="25" y="25" width="220" height="24" rx="3" fill="#242424" />
+  <text x="35" y="41" fill="#ffffff" font-size="11" font-weight="700" letter-spacing="0.5">TIER 1: TASK LAYER (~0.1 - 0.2 Hz)</text>
+  <text x="960" y="41" fill="#666666" font-size="11" font-weight="600">Foundation Models</text>
+
+  <!-- Layer 2 Swimlane: Mission Layer -->
+  <rect x="25" y="195" width="1050" height="185" rx="4" fill="#fafafa" stroke="#d0d0d0" stroke-width="1" />
+  <rect x="25" y="195" width="270" height="24" rx="3" fill="#242424" />
+  <text x="35" y="211" fill="#ffffff" font-size="11" font-weight="700" letter-spacing="0.5">TIER 2: MISSION LAYER (5 - 10 Hz)</text>
+  <text x="915" y="211" fill="#666666" font-size="11" font-weight="600">Metric Grounding &amp; Safety</text>
+
+  <!-- Layer 3 Swimlane: Flight Layer -->
+  <rect x="25" y="400" width="1050" height="155" rx="4" fill="#fafafa" stroke="#d0d0d0" stroke-width="1" />
+  <rect x="25" y="400" width="280" height="24" rx="3" fill="#242424" />
+  <text x="35" y="416" fill="#ffffff" font-size="11" font-weight="700" letter-spacing="0.5">TIER 3: FLIGHT LAYER (500 - 1000 Hz)</text>
+  <text x="895" y="416" fill="#666666" font-size="11" font-weight="600">Real-Time Control &amp; Physics</text>
+
+  <!-- ==================== TIER 1: TASK LAYER COMPONENTS ==================== -->
+
+  <!-- Input Prompt Box -->
+  <rect x="45" y="65" width="175" height="90" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="55" y="85" fill="#111111" font-size="12" font-weight="700">Natural Instruction ℓ</text>
+  <text x="55" y="105" fill="#555555" font-size="10.5" font-style="italic">"Find the red bottle and</text>
+  <text x="55" y="120" fill="#555555" font-size="10.5" font-style="italic">hover above it for 4s"</text>
+  <rect x="55" y="132" width="65" height="16" rx="2" fill="#eeeeee"/>
+  <text x="60" y="144" fill="#333333" font-size="9" font-family="monospace">Text Input</text>
+
+  <!-- Intent Classifier Box -->
+  <rect x="260" y="65" width="180" height="90" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="270" y="85" fill="#111111" font-size="12" font-weight="700">Intent Classifier</text>
+  <text x="270" y="103" fill="#444444" font-size="10">Classifies instruction ℓ:</text>
+  <text x="270" y="118" fill="#444444" font-size="9.5" font-family="monospace">&bull; Geometric rule-short</text>
+  <text x="270" y="132" fill="#444444" font-size="9.5" font-family="monospace">&bull; Visual semantic search</text>
+  <text x="270" y="146" fill="#444444" font-size="9.5" font-family="monospace">&bull; Standoff inspection</text>
+
+  <!-- VLM Object Search Box (Shaded Foundation Model) -->
+  <rect x="480" y="65" width="225" height="90" rx="4" fill="#f0f0f0" stroke="#111111" stroke-width="1.5" stroke-dasharray="4,2" filter="url(#box-shadow)"/>
+  <rect x="480" y="65" width="225" height="18" fill="#363636"/>
+  <text x="490" y="78" fill="#ffffff" font-size="10" font-weight="700">FOUNDATION VLM (FROZEN)</text>
+  <text x="490" y="102" fill="#111111" font-size="12" font-weight="700">Vision-Language Model</text>
+  <text x="490" y="118" fill="#444444" font-size="10">Gemini 2.5 Flash / Qwen2-VL</text>
+  <text x="490" y="133" fill="#111111" font-size="10.5" font-weight="600">B<tspan baseline-shift="sub" font-size="8">2D</tspan> = [ymin, xmin, ymax, xmax]</text>
+  <text x="490" y="147" fill="#666666" font-size="9" font-family="monospace">Normalized image coordinates</text>
+
+  <!-- Skill Sequence Planner Box -->
+  <rect x="745" y="65" width="190" height="90" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="755" y="85" fill="#111111" font-size="12" font-weight="700">Skill Sequence Planner</text>
+  <text x="755" y="103" fill="#444444" font-size="10">Generates atomic skills S:</text>
+  <text x="755" y="120" fill="#222222" font-size="9.5" font-family="monospace" font-weight="600">[TAKEOFF, MOVE_TO,</text>
+  <text x="755" y="134" fill="#222222" font-size="9.5" font-family="monospace" font-weight="600"> HOVER, ROTATE, LAND]</text>
+  <text x="755" y="148" fill="#666666" font-size="9">Structured skill JSON list</text>
+
+  <!-- Arrows in Tier 1 -->
+  <line x1="220" y1="110" x2="258" y2="110" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="440" y1="110" x2="478" y2="110" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="705" y1="110" x2="743" y2="110" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ==================== TIER 2: MISSION LAYER COMPONENTS ==================== -->
+
+  <!-- Overhead RGB-D & Calibration -->
+  <rect x="45" y="240" width="175" height="115" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="55" y="260" fill="#111111" font-size="12" font-weight="700">Calibrated RGB-D</text>
+  <text x="55" y="278" fill="#444444" font-size="10">Overhead camera stream</text>
+  <text x="55" y="293" fill="#444444" font-size="10">&bull; 720 &times; 960 resolution</text>
+  <text x="55" y="308" fill="#444444" font-size="10">&bull; 6-marker ArUco pose</text>
+  <text x="55" y="323" fill="#111111" font-size="10" font-weight="600">Reprojection: 0.78 px</text>
+  <rect x="55" y="333" width="95" height="16" rx="2" fill="#eeeeee"/>
+  <text x="60" y="345" fill="#333333" font-size="9" font-family="monospace">Depth: 1.72-2.92m</text>
+
+  <!-- Depth Proposals & Grounding (Core Innovation) -->
+  <rect x="255" y="235" width="235" height="125" rx="4" fill="#ffffff" stroke="#000000" stroke-width="2" filter="url(#box-shadow)"/>
+  <rect x="255" y="235" width="235" height="20" fill="#111111"/>
+  <text x="265" y="249" fill="#ffffff" font-size="10" font-weight="700">DEPTH-VERIFIED GROUNDING</text>
+  <text x="265" y="273" fill="#111111" font-size="12" font-weight="700">Physical Object Proposals</text>
+  <text x="265" y="290" fill="#444444" font-size="9.5">1. Height map ground subtraction (RANSAC)</text>
+  <text x="265" y="304" fill="#444444" font-size="9.5">2. Euclidean clustering &rarr; 3D proposals {O<tspan baseline-shift="sub" font-size="7">j</tspan>}</text>
+  <text x="265" y="319" fill="#111111" font-size="9.5" font-weight="700">3. IoU(B<tspan baseline-shift="sub" font-size="7">2D</tspan>, Proj(O<tspan baseline-shift="sub" font-size="7">j</tspan>)) &gt; 0 Check</text>
+  <rect x="265" y="328" width="215" height="24" rx="2" fill="#f5f5f5" stroke="#cccccc"/>
+  <text x="270" y="344" fill="#111111" font-size="9.5" font-weight="600">&bull; Match &rarr; Metric P<tspan baseline-shift="sub" font-size="7">w</tspan>  &bull; No Match &rarr; REFUSE</text>
+
+  <!-- Safety Validator Box -->
+  <rect x="525" y="240" width="180" height="115" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="535" y="260" fill="#111111" font-size="12" font-weight="700">Safety Validator Shield</text>
+  <text x="535" y="278" fill="#444444" font-size="10">Deterministic invariants:</text>
+  <text x="535" y="295" fill="#222222" font-size="9.5" font-family="monospace">&bull; Height cap: &le; 0.30 m</text>
+  <text x="535" y="310" fill="#222222" font-size="9.5" font-family="monospace">&bull; Speed cap: &le; 0.40 m/s</text>
+  <text x="535" y="325" fill="#222222" font-size="9.5" font-family="monospace">&bull; Geofence: &plusmn;1.0 m</text>
+  <text x="535" y="340" fill="#222222" font-size="9.5" font-family="monospace">&bull; Battery cutoff &ge; 3.0V</text>
+
+  <!-- Mission Executor & Route Planner -->
+  <rect x="740" y="240" width="165" height="115" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="750" y="260" fill="#111111" font-size="12" font-weight="700">Mission Executor</text>
+  <text x="750" y="278" fill="#444444" font-size="10">Trajectory Generation:</text>
+  <text x="750" y="295" fill="#444444" font-size="9.5">&bull; Obstacle avoidance</text>
+  <text x="750" y="310" fill="#444444" font-size="9.5">&bull; Smooth velocity curves</text>
+  <text x="750" y="325" fill="#111111" font-size="9.5" font-weight="600">x<tspan baseline-shift="sub" font-size="7">cmd</tspan>(t) = [x, y, z, &psi;]</text>
+  <rect x="750" y="333" width="140" height="16" rx="2" fill="#eeeeee"/>
+  <text x="755" y="345" fill="#333333" font-size="8.5" font-family="monospace">10 Hz UDP Setpoints</text>
+
+  <!-- Dynamic Replan Manager -->
+  <rect x="930" y="240" width="130" height="115" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="940" y="260" fill="#111111" font-size="11.5" font-weight="700">Replan Manager</text>
+  <text x="940" y="278" fill="#444444" font-size="9.5">Target tracking:</text>
+  <text x="940" y="295" fill="#222222" font-size="9" font-family="monospace">&Delta;p &gt; 15 cm &rarr;</text>
+  <text x="940" y="310" fill="#111111" font-size="9.5" font-weight="700">Trigger Replan</text>
+  <text x="940" y="328" fill="#666666" font-size="9">Latency: 0.4 s</text>
+  <text x="940" y="342" fill="#666666" font-size="9">(Case 09 recovery)</text>
+
+  <!-- Arrows in Tier 2 & Inter-tier -->
+  <!-- RGB-D stream to depth proposals -->
+  <line x1="220" y1="295" x2="253" y2="295" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- RGB-D frames to VLM in Tier 1 -->
+  <path d="M 130 240 L 130 190 L 590 190 L 590 157" fill="none" stroke="#222222" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+  <text x="320" y="185" fill="#555555" font-size="9" font-family="monospace">Overhead RGB Frames (TCP 5007)</text>
+
+  <!-- Grounded Target to Skill Planner -->
+  <path d="M 370 235 L 370 170 L 840 170 L 840 157" fill="none" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="640" y="166" fill="#222222" font-size="9.5" font-weight="600">Grounded 3D Target P<tspan baseline-shift="sub" font-size="7">w</tspan> (m)</text>
+
+  <!-- Skills from Planner to Safety Validator -->
+  <path d="M 840 155 L 840 215 L 615 215 L 615 238" fill="none" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="690" y="210" fill="#222222" font-size="9.5" font-weight="600">Skills S</text>
+
+  <!-- Safety Validator to Mission Executor -->
+  <line x1="705" y1="295" x2="738" y2="295" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Replan feedback to Executor -->
+  <line x1="930" y1="295" x2="907" y2="295" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ==================== TIER 3: FLIGHT LAYER COMPONENTS ==================== -->
+
+  <!-- Cascaded Flight Controller -->
+  <rect x="45" y="435" width="245" height="105" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="55" y="455" fill="#111111" font-size="12" font-weight="700">Cascaded Flight Controller</text>
+  <text x="55" y="473" fill="#444444" font-size="9.5">4-Loop Cascaded Deterministic PIV:</text>
+  <text x="55" y="490" fill="#222222" font-size="9" font-family="monospace">&bull; Position P (100 Hz) &rarr; Vel ref</text>
+  <text x="55" y="504" fill="#222222" font-size="9" font-family="monospace">&bull; Velocity PI (250 Hz) &rarr; Attitude ref</text>
+  <text x="55" y="518" fill="#222222" font-size="9" font-family="monospace">&bull; Attitude P &rarr; Rate PID (500-1000 Hz)</text>
+  <text x="55" y="532" fill="#111111" font-size="9" font-family="monospace" font-weight="700">&bull; Motor PWM Mixer (&omega;1..4)</text>
+
+  <!-- State Estimator (EKF) -->
+  <rect x="325" y="435" width="240" height="105" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="335" y="455" fill="#111111" font-size="12" font-weight="700">Onboard State Estimator (EKF)</text>
+  <text x="335" y="473" fill="#444444" font-size="9.5">Sensor Fusion @ 500 Hz:</text>
+  <text x="335" y="490" fill="#222222" font-size="9" font-family="monospace">&bull; PMW3901 Optical Flow (vel)</text>
+  <text x="335" y="504" fill="#222222" font-size="9" font-family="monospace">&bull; VL53L1X Laser ToF (height z)</text>
+  <text x="335" y="518" fill="#222222" font-size="9" font-family="monospace">&bull; MPU-6050 6-DOF IMU (accel/gyro)</text>
+  <text x="335" y="532" fill="#666666" font-size="8.5">Estimator RMSE: 1.9 cm &bull; Drift: 1.8 cm</text>
+
+  <!-- Dual Target Platforms -->
+  <!-- Target A: LiteWing Nano-Drone -->
+  <rect x="600" y="435" width="225" height="105" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="610" y="455" fill="#111111" font-size="12" font-weight="700">Target A: LiteWing Drone</text>
+  <text x="610" y="473" fill="#444444" font-size="9.5">45g Open-Hardware Airframe:</text>
+  <text x="610" y="490" fill="#222222" font-size="9" font-family="monospace">&bull; ESP32-S3 Dual-Core 240 MHz</text>
+  <text x="610" y="504" fill="#222222" font-size="9" font-family="monospace">&bull; 4x 720 Coreless Brushed Motors</text>
+  <text x="610" y="518" fill="#222222" font-size="9" font-family="monospace">&bull; 1S 380mAh Li-Po (TP4056)</text>
+  <text x="610" y="532" fill="#111111" font-size="9" font-weight="600">Ported Crazyflie Firmware over Wi-Fi</text>
+
+  <!-- Target B: Simscape Multibody Digital Twin -->
+  <rect x="855" y="435" width="205" height="105" rx="4" fill="#ffffff" stroke="#222222" stroke-width="1.2" filter="url(#box-shadow)"/>
+  <text x="865" y="455" fill="#111111" font-size="12" font-weight="700">Target B: Simscape Twin</text>
+  <text x="865" y="473" fill="#444444" font-size="9.5">Multibody Rigid Plant:</text>
+  <text x="865" y="490" fill="#222222" font-size="9" font-family="monospace">&bull; 6-DOF Contact Mechanics</text>
+  <text x="865" y="504" fill="#222222" font-size="9" font-family="monospace">&bull; Aerodynamic rotor lag</text>
+  <text x="865" y="518" fill="#222222" font-size="9" font-family="monospace">&bull; Wind gust: &sigma;g = 0.30 m/s</text>
+  <text x="865" y="532" fill="#111111" font-size="9" font-weight="600">Unreal Engine Camera Render</text>
+
+  <!-- Tier 2 to Tier 3 Flow: Setpoints -->
+  <path d="M 820 355 L 820 380 L 165 380 L 165 433" fill="none" stroke="#222222" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="380" y="375" fill="#111111" font-size="10" font-weight="700">UDP 5005 Setpoints: x_cmd = [x, y, z, &psi;] (10-50 Hz)</text>
+
+  <!-- Controller to Plant -->
+  <line x1="290" y1="485" x2="323" y2="485" stroke="#222222" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 290 500 L 310 500 L 310 420 L 710 420 L 710 433" fill="none" stroke="#222222" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <path d="M 710 420 L 955 420 L 955 433" fill="none" stroke="#222222" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Telemetry Feedback (UDP 5006) to Mission Layer -->
+  <path d="M 445 435 L 445 390 L 870 390 L 870 357" fill="none" stroke="#555555" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow-dashed)"/>
+  <text x="540" y="398" fill="#555555" font-size="9" font-family="monospace">50 Hz Telemetry (UDP 5006)</text>
+</svg>

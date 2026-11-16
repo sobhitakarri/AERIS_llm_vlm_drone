@@ -33,6 +33,10 @@ for i = 1:numel(T.scene.objects)
     o = T.scene.objects(i);
     gt.(o.name) = struct('type', o.type, 'pos', o.pos, 'size_m', o.size_m, ...
         'yaw_deg', o.yaw_deg, 'movable', o.movable);
+    if strcmpi(o.type, 'gate')
+        gt.(o.name).poster = o.poster; gt.(o.name).shape = o.shape;
+        gt.(o.name).shape_color = o.shape_color;
+    end
 end
 R.ground_truth = struct('objects', gt, 'cameras', cams);
 

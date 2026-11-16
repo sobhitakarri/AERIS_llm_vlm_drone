@@ -8,7 +8,7 @@ function buildScene(world, root, T)
 % (plus child actors for textured parts), so movable objects can be driven
 % by name from Simulink.
 
-tex = @(f) fullfile(T.assets.tex, f);
+tex = @(f) assetPath(T, f);
 room = T.scene.room.size_m(:).';
 hx = room(1) / 2; hy = room(2) / 2; hz = room(3);
 
@@ -148,5 +148,14 @@ if isempty(root)
     add(world, actor);
 else
     add(world, actor, root);
+end
+end
+
+function p = assetPath(T, f)
+% Textures named 'gates/<file>' come from assets/gates, the rest from assets/tex.
+if startsWith(f, 'gates/')
+    p = fullfile(T.assets.gates, f(7:end));
+else
+    p = fullfile(T.assets.tex, f);
 end
 end

@@ -19,6 +19,7 @@ T = struct();
 T.airframe_id = char(airframe);
 T.scene_id = char(scene);
 T.assets.tex = fullfile(twinDir, 'assets', 'tex');
+T.assets.gates = fullfile(twinDir, 'assets', 'gates');
 T.paths.twin = twinDir;
 T.paths.repo = repoDir;
 T.paths.runtime = fullfile(repoDir, 'cache', 'twin_runtime.json');
@@ -151,6 +152,9 @@ terrain = zeros(numel(S.objects), 6);
 for i = 1:numel(S.objects)
     o = S.objects(i);
     terrain(i, :) = [o.pos(1) o.pos(2) o.size_m(1)/2 o.size_m(2)/2 deg2rad(o.yaw_deg) o.pos(3)+o.size_m(3)];
+    if strcmpi(o.type, 'gate')   % a gate is flown through: it is no surface for the downward range sensor
+        terrain(i, :) = [o.pos(1) o.pos(2) 0 0 0 0];
+    end
 end
 
 % Numeric-only subset handed to the generated-code blocks.
@@ -160,9 +164,11 @@ T.core = struct('g', T.g, 'rho', T.rho, 'air', T.air, 'bat', T.bat, 'sens', T.se
     'home', [S.home.pos(:).' T.z_rest], 'home_yaw', deg2rad(S.home.yaw_deg), 'terrain', terrain);
 T.core.air = rmfield(T.core.air, 'name');
 
-T.net.cmd_port = 5005;
-T.net.telem_port = 5006;
-T.net.cam_port = 5007;
+base = str2double(getenv('AERIS_PORT_BASE'));   % optional: run a second twin or dodge a busy port
+if isnan(base), base = 5005; end
+T.net.cmd_port = base;
+T.net.telem_port = base + 1;
+T.net.cam_port = base + 2;
 T.net.host = '127.0.0.1';
 end
 
@@ -171,7 +177,7 @@ function objs = normaliseObjects(raw)
 if isstruct(raw), raw = num2cell(raw); end
 defaults = struct('name', '', 'type', 'box', 'pos', [0 0 0], 'yaw_deg', 0, ...
     'size_m', [0.2 0.2 0.2], 'color', [0.6 0.6 0.6], 'material', '', ...
-    'movable', false, 'collide', false);
+    'movable', false, 'collide', false, 'poster', '', 'shape', '', 'shape_color', [1 0 0]);
 keys = fieldnames(defaults);
 objs = repmat(defaults, 1, numel(raw));
 for i = 1:numel(raw)

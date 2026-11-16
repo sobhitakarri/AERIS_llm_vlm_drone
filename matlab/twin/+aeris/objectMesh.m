@@ -170,6 +170,34 @@ switch lower(o.type)
         m.box([s(1)+0.02 s(2)+0.02 0.03], [0 0 s(3)-0.015], [0.7 0.7 0.72]);
         groups = add(groups, m, '', 0.12, 0, 0.1);
 
+    case 'gate'
+        % A freestanding gate to fly through. Front faces local +x (give
+        % yaw_deg 180 to face a drone that looks along world +x). size_m is
+        % [depth width height]; the opening is (width-0.2) wide, 0.2..0.85 m
+        % above the floor. A poster hangs above the opening and an outlined
+        % shape (o.shape: triangle | circle | rect, colour o.shape_color)
+        % sits between the two.
+        d = s(1); w = s(2); h = s(3);
+        post = 0.10; z0 = 0.20; z1 = 0.85;
+        m = aeris.MeshBuilder;
+        frame = [0.22 0.25 0.30];
+        m.box([d post h], [0  (w-post)/2 h/2], frame);
+        m.box([d post h], [0 -(w-post)/2 h/2], frame);
+        m.box([d w z0], [0 0 z0/2], frame);
+        m.box([d w h-z1], [0 0 z1+(h-z1)/2], [0.90 0.90 0.88]);
+        groups = add(groups, m, '', 0.25, 0.1, 0.25);
+        if ~isempty(o.poster)
+            pw = min(0.50, w-0.2); pz = h - 0.05 - pw/2; xf = d/2 + 0.003;
+            q = aeris.MeshBuilder;
+            q.quad([xf -pw/2 pz-pw/2], [xf pw/2 pz-pw/2], [xf pw/2 pz+pw/2], [xf -pw/2 pz+pw/2], [1 1 1], [0 1; 1 1; 1 0; 0 0]);
+            groups = add(groups, q, ['gates/' o.poster '.png'], 0.15, 0, 0.15);
+        end
+        if ~isempty(o.shape)
+            sh = aeris.MeshBuilder;
+            gateShape(sh, lower(o.shape), d/2 + 0.004, 0, z1 + 0.115, 0.075, o.shape_color(:).');
+            groups = add(groups, sh, '', 0.2, 0, 0.2);
+        end
+
     otherwise
         m = aeris.MeshBuilder;
         m.box(s, [0 0 s(3)/2], col);
@@ -180,4 +208,34 @@ end
 function groups = add(groups, mesh, texture, shininess, metallic, specular)
 groups(end+1) = struct('mesh', mesh, 'texture', texture, 'shininess', shininess, ...
     'metallic', metallic, 'specular', specular, 'transparency', 0);
+end
+
+function gateShape(mb, kind, x, cy, cz, r, col)
+% Outlined triangle, circle or rectangle in the plane x, centred (cy, cz), seen from +x.
+t = 0.022;
+switch kind
+    case 'triangle'
+        a = r * 1.25;
+        P = [cy cz+a; cy-a*0.95 cz-a*0.6; cy+a*0.95 cz-a*0.6];
+        for k = 1:3, stroke(mb, x, P(k, :), P(mod(k, 3)+1, :), t, col); end
+    case 'circle'
+        n = 28; ang = linspace(0, 2*pi, n+1);
+        P = [cy + r*1.15*cos(ang(:)), cz + r*1.15*sin(ang(:))];
+        for k = 1:n, stroke(mb, x, P(k, :), P(k+1, :), t, col); end
+    otherwise   % rect
+        a = r * 1.6; b = r * 0.95;
+        P = [cy-a cz-b; cy+a cz-b; cy+a cz+b; cy-a cz+b];
+        for k = 1:4
+            p = P(k, :); q = P(mod(k, 4)+1, :);
+            e = (q - p) / norm(q - p) * t / 2;
+            stroke(mb, x, p - e, q + e, t, col);
+        end
+end
+end
+
+function stroke(mb, x, p, q, t, col)
+% A flat bar from p to q ((y, z) pairs), t wide, counter-clockwise seen from +x.
+d = (q - p) / norm(q - p); n = [-d(2) d(1)] * t / 2;
+c = [p - n; q - n; q + n; p + n];
+mb.quad([x c(1, :)], [x c(2, :)], [x c(3, :)], [x c(4, :)], col);
 end

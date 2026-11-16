@@ -1,0 +1,176 @@
+[
+  {
+    "id": 1,
+    "scene": "scene_gates_1",
+    "prompt": "Fly through the gate with the dog",
+    "answer": "gate_dog",
+    "gates": [
+      {
+        "name": "gate_dog",
+        "poster": "dog",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_horse",
+        "poster": "horse",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": 0.0
+      },
+      {
+        "name": "gate_parrot",
+        "poster": "parrot",
+        "shape": "circle",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "scene": "scene_gates_2",
+    "prompt": "Go to the Linux penguin gate",
+    "answer": "gate_tux",
+    "gates": [
+      {
+        "name": "gate_python",
+        "poster": "python",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_chrome",
+        "poster": "chrome",
+        "shape": "circle",
+        "x": 0.4,
+        "y": 0.0
+      },
+      {
+        "name": "gate_tux",
+        "poster": "tux",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "scene": "scene_gates_3",
+    "prompt": "Go to the healthy food gate",
+    "answer": "gate_fruit",
+    "gates": [
+      {
+        "name": "gate_burger",
+        "poster": "burger",
+        "shape": "rect",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_pizza",
+        "poster": "pizza",
+        "shape": "rect",
+        "x": 1.0,
+        "y": 0.0
+      },
+      {
+        "name": "gate_fruit",
+        "poster": "fruit",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "scene": "scene_gates_4",
+    "prompt": "Move towards the gate with the number equal to 2+4",
+    "answer": "gate_digit_6",
+    "gates": [
+      {
+        "name": "gate_digit_3",
+        "poster": "digit_3",
+        "shape": "rect",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_digit_9",
+        "poster": "digit_9",
+        "shape": "triangle",
+        "x": 1.0,
+        "y": 0.0
+      },
+      {
+        "name": "gate_digit_6",
+        "poster": "digit_6",
+        "shape": "circle",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "scene": "scene_gates_5",
+    "prompt": "Fly through the gate with the Mona Lisa painting",
+    "answer": "gate_monalisa",
+    "gates": [
+      {
+        "name": "gate_monalisa",
+        "poster": "monalisa",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_scream",
+        "poster": "scream",
+        "shape": "rect",
+        "x": 0.4,
+        "y": 0.0
+      },
+      {
+        "name": "gate_pearl",
+        "poster": "pearl",
+        "shape": "triangle",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "scene": "scene_gates_6",
+    "prompt": "Reach the gate with the cowboy",
+    "answer": "gate_cowboy",
+    "gates": [
+      {
+        "name": "gate_firefighter",
+        "poster": "firefighter",
+        "shape": "rect",
+        "x": 0.4,
+        "y": 1.1
+      },
+      {
+        "name": "gate_cowboy",
+        "poster": "cowboy",
+        "shape": "rect",
+        "x": 1.0,
+        "y": 0.0
+      },
+      {
+        "name": "gate_astronaut",
+        "poster": "astronaut",
+        "shape": "rect",
+        "x": 0.4,
+        "y": -1.1
+      }
+    ]
+  }
+]

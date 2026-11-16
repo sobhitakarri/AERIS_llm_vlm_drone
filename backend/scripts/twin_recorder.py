@@ -105,9 +105,11 @@ def _fmt(v, spec: str = "+.2f") -> str:
 
 
 class Recorder:
-    def __init__(self, path, title: str, source, caption: str = "", fps: int = 10, sim_dt: float = 0.2):
+    def __init__(self, path, title: str, source, caption: str = "", fps: int = 10, sim_dt: float = 0.2,
+                 main_cam: str = "overhead"):
         self.path = Path(path)
         self.title, self.caption, self.note = title, caption, ""
+        self.main_cam = main_cam
         self.source, self.fps, self.sim_dt = source, fps, sim_dt
         self.last_frame: Optional[np.ndarray] = None
         self.frames = 0
@@ -175,9 +177,11 @@ class Recorder:
         cv2.putText(canvas, self.caption[:95], (tw + 36, 26), FONT, 0.55, (255, 200, 120), 1, cv2.LINE_AA)
 
         body = H - HEAD
-        canvas[HEAD:, :W - SIDE] = _fit(self.source.frame("overhead"), W - SIDE, body, "overhead RGB-D camera + perception")
+        labels = {"overhead": "overhead RGB-D camera + perception", "fpv": "onboard camera", "chase": "room camera"}
+        other = "overhead" if self.main_cam == "fpv" else "fpv"
+        canvas[HEAD:, :W - SIDE] = _fit(self.source.frame(self.main_cam), W - SIDE, body, labels[self.main_cam])
         canvas[HEAD:HEAD + 210, W - SIDE:] = _fit(self.source.frame("chase"), SIDE, 210, "room camera")
-        canvas[HEAD + 210:HEAD + 490, W - SIDE:] = _fit(self.source.frame("fpv"), SIDE, 280, "onboard camera")
+        canvas[HEAD + 210:HEAD + 490, W - SIDE:] = _fit(self.source.frame(other), SIDE, 280, "onboard camera" if other == "fpv" else "overhead camera")
 
         x0, y = W - SIDE + 12, HEAD + 490 + 22
         est, tr = info.get("est") or (None,) * 4, info.get("truth") or {}

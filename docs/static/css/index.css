@@ -1,0 +1,384 @@
+/* ==========================================================================
+   AERIS Research Project Page Stylesheet
+   Pure Academic Monochrome Design (Patterned after SPF & TypeFly / Nerfies)
+   ========================================================================== */
+
+body {
+  font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #4a4a4a;
+  background-color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Google Sans', 'Noto Sans', sans-serif;
+  color: #363636;
+  font-weight: 700;
+}
+
+.publication-title {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 700;
+  font-size: 2.4rem !important;
+  color: #111111 !important;
+  line-height: 1.25;
+  margin-bottom: 1.25rem !important;
+}
+
+.conference-block {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 600;
+  color: #555555;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.publication-authors {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 1.15rem;
+  color: #363636;
+  margin-bottom: 0.5rem;
+}
+
+.publication-authors a {
+  color: #363636;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.publication-authors a:hover {
+  color: #000000;
+  text-decoration: underline;
+}
+
+.author-block {
+  display: inline-block;
+  margin: 0 0.25rem;
+}
+
+.institution-block {
+  font-size: 1rem;
+  color: #666666;
+  margin-top: 0.5rem;
+}
+
+.publication-links {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.link-block {
+  display: inline-block;
+}
+
+/* Strictly Black & White Pill Buttons (SPF / TypeFly style) */
+.button.is-dark {
+  background-color: #363636 !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: 290486px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.button.is-dark:hover {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.button.is-dark .icon {
+  margin-right: 0.35rem;
+}
+
+/* Teaser Hero */
+.teaser .hero-body {
+  padding-top: 1rem;
+  padding-bottom: 2.5rem;
+}
+
+.teaser-image-wrap {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  margin-bottom: 1.25rem;
+}
+
+.teaser-image-wrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.subtitle {
+  color: #4a4a4a !important;
+  font-size: 1.05rem !important;
+  line-height: 1.6;
+  max-width: 960px;
+  margin: 0 auto !important;
+}
+
+/* Abstract Section */
+.hero.is-light {
+  background-color: #f7f7f7 !important;
+  border-top: 1px solid #eaeaea;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.content.has-text-justified {
+  text-align: justify;
+  text-justify: inter-word;
+  line-height: 1.75;
+  font-size: 1.02rem;
+  color: #363636;
+}
+
+/* Method Overview & Architecture Diagram */
+.card-container {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.arch-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.arch-svg-wrap svg {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+/* Academic Tables (Booktabs Style: Pure Black Rules) */
+.table.academic-table {
+  width: 100%;
+  margin: 1.5rem 0;
+  background-color: #ffffff;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  color: #333333;
+}
+
+.table.academic-table thead tr {
+  border-top: 2px solid #222222;
+  border-bottom: 1.5px solid #222222;
+}
+
+.table.academic-table th {
+  color: #111111;
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 700;
+  padding: 0.6rem 0.8rem;
+  border: none;
+  background: #fafafa;
+}
+
+.table.academic-table td {
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid #eaeaea;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.table.academic-table tbody tr:last-child {
+  border-bottom: 2px solid #222222;
+}
+
+.table.academic-table td.bold {
+  font-weight: 700;
+  color: #000000;
+}
+
+/* Qualitative Grid */
+.qualitative-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.qualitative-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.qualitative-card img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+}
+
+.qualitative-card-body {
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.qualitative-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111111;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.qualitative-card-desc {
+  font-size: 0.85rem;
+  color: #555555;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.qualitative-meta {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: #333333;
+}
+
+/* Trajectory Simulator in B&W */
+.simulator-box {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.simulator-toolbar {
+  background: #242424;
+  color: #ffffff;
+  padding: 0.65rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sim-btn {
+  background: #363636;
+  border: 1px solid #4a4a4a;
+  color: #ffffff;
+  padding: 0.3rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sim-btn:hover, .sim-btn.active {
+  background: #555555;
+}
+
+#flight-canvas {
+  width: 100%;
+  height: 380px;
+  display: block;
+  background: #181818;
+}
+
+.sim-hud {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(20, 20, 20, 0.88);
+  border: 1px solid #333333;
+  border-radius: 4px;
+  padding: 0.6rem 0.85rem;
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 0.78rem;
+  min-width: 170px;
+}
+
+/* BibTeX Box */
+pre {
+  background-color: #f7f7f7 !important;
+  color: #222222 !important;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 1.25rem !important;
+  font-size: 0.85rem !important;
+  line-height: 1.55;
+  overflow-x: auto;
+  position: relative;
+}
+
+.btn-copy-code {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #363636;
+  border: none;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-copy-code:hover {
+  background: #111111;
+}
+
+/* Footer */
+.footer {
+  background-color: #fbfbfb;
+  border-top: 1px solid #eaeaea;
+  padding: 2.5rem 1.5rem;
+  color: #666666;
+  font-size: 0.88rem;
+}
+
+.footer a {
+  color: #363636;
+  text-decoration: underline;
+}
+
+/* Math blocks */
+.math-block {
+  text-align: center;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  font-size: 1.05rem;
+}
+
+@media screen and (max-width: 768px) {
+  .publication-title {
+    font-size: 1.8rem !important;
+  }
+}
+

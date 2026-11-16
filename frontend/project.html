@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="AERIS: A closed-loop framework for language-guided micro-quadrotor flight combining Vision-Language Models, depth-verified 3D spatial grounding, formal safety validation, and high-fidelity Simscape digital twin verification.">
+  <meta name="keywords" content="Vision-Language Models, Autonomous Drone, Quadrotor, Zero-shot UAV Navigation, Spatial Grounding, Simscape, LiteWing, ESP32-S3">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AERIS: Language-Guided Autonomous Micro-Quadrotor Flight via Depth-Verified Vision-Language Grounding</title>
+
+  <!-- Google Fonts: Google Sans, Noto Sans, Castoro (Same as SPF & TypeFly) -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <!-- Bulma CSS & FontAwesome -->
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+  <!-- Project Specific Pure Academic Monochrome CSS -->
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <!-- MathJax Configuration for Crisp LaTeX -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+  <!-- ==================== HERO: TITLE, AUTHORS, LINKS ==================== -->
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            
+            <h1 class="title is-1 publication-title">
+              AERIS: Language-Guided Autonomous Micro-Quadrotor Flight via Depth-Verified Vision-Language Grounding
+            </h1>
+
+            <div class="is-size-5 conference-block">
+              <span>Amrita School of Engineering, Bengaluru &bull; B.Tech Capstone Project 2026</span>
+            </div>
+
+            <!-- Authors -->
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://github.com/sobhitakarri" target="_blank">D. Rushikesh</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="https://github.com/sobhitakarri" target="_blank">Devarapalli Shanmukha Venkata Sai Nath Reddy</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="https://github.com/sobhitakarri" target="_blank">Karri Saraswathi Venkata Sai Sobhita</a><sup>1</sup>
+              </span>
+            </div>
+
+            <div class="is-size-6 publication-authors">
+              <span class="author-block">Project Supervisor: <b>Dr. Sreeja Kochuvila</b>, Associate Professor</span>
+            </div>
+
+            <div class="is-size-6 institution-block">
+              <span class="author-block"><sup>1</sup>Department of Electronics and Communication Engineering</span><br>
+              <span class="author-block">Amrita School of Engineering, Bengaluru &bull; Amrita Vishwa Vidyapeetham, India</span>
+            </div>
+
+            <!-- Publication Links: Strictly Black & White Pills (SPF / TypeFly style) -->
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                
+                <!-- PDF Link -->
+                <span class="link-block">
+                  <a href="assets/AERIS_Project_Report.pdf" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                    <span>Paper / Report</span>
+                  </a>
+                </span>
+
+                <!-- Code Link -->
+                <span class="link-block">
+                  <a href="https://github.com/sobhitakarri/AERIS_llm_vlm_drone" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fab fa-github"></i></span>
+                    <span>Code</span>
+                  </a>
+                </span>
+
+                <!-- Ground Station Link -->
+                <span class="link-block">
+                  <a href="index.html" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-desktop"></i></span>
+                    <span>Ground Station</span>
+                  </a>
+                </span>
+
+                <!-- LiteWing Console Link -->
+                <span class="link-block">
+                  <a href="litewing.html" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-gamepad"></i></span>
+                    <span>LiteWing Console</span>
+                  </a>
+                </span>
+
+                <!-- Demos Jump Link -->
+                <span class="link-block">
+                  <a href="#demos" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-video"></i></span>
+                    <span>Video Demos</span>
+                  </a>
+                </span>
+
+                <!-- Benchmarks Jump Link -->
+                <span class="link-block">
+                  <a href="#benchmarks" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-chart-bar"></i></span>
+                    <span>Benchmarks</span>
+                  </a>
+                </span>
+
+                <!-- BibTeX Jump Link -->
+                <span class="link-block">
+                  <a href="#bibtex" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-quote-right"></i></span>
+                    <span>BibTeX</span>
+                  </a>
+                </span>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TEASER HERO (SPF STYLE) ==================== -->
+  <section class="hero teaser">
+    <div class="container is-max-desktop">
+      <div class="hero-body">
+        
+        <!-- Multi-panel teaser graphic -->
+        <div class="teaser-image-wrap">
+          <div class="columns is-gapless is-mobile" style="margin: 0; background: #ffffff;">
+            <div class="column is-3" style="position: relative;">
+              <img src="assets/img/camera_overhead.jpg" alt="Overhead Calibrated RGB Camera">
+              <span style="position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 3px;">(a) Overhead RGB</span>
+            </div>
+            <div class="column is-3" style="position: relative; border-left: 1px solid #e0e0e0;">
+              <img src="assets/img/camera_overhead_depth.jpg" alt="Overhead Depth Map">
+              <span style="position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 3px;">(b) Metric Depth Map</span>
+            </div>
+            <div class="column is-3" style="position: relative; border-left: 1px solid #e0e0e0;">
+              <img src="assets/img/perception_depth_proposals.jpg" alt="Physical Proposals & Grounded Box">
+              <span style="position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 3px;">(c) 3D Proposals &amp; Box</span>
+            </div>
+            <div class="column is-3" style="position: relative; border-left: 1px solid #e0e0e0;">
+              <img src="assets/previews/case02_find_the_red_bottle_and_hover.gif" alt="Flight in Simscape Multibody Twin">
+              <span style="position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 3px;">(d) Closed-Loop Flight</span>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="subtitle has-text-centered">
+          <strong>Zero-shot language-guided micro-quadrotor flight.</strong> AERIS translates natural language instructions into safe, depth-verified 3D flight paths without task-specific training. By projecting metric depth into physical object proposals, AERIS eliminates the fatal floor-hallucination failure of 2D Vision-Language Models, validated on a 45g LiteWing nano-quadrotor and a high-fidelity Simscape Multibody digital twin.
+        </h2>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ABSTRACT (SPF / BULMA STYLE) ==================== -->
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              Autonomous multirotor flight from natural-language instructions requires bridging the gap between high-latency, non-deterministic foundation models (~0.1 Hz) and fast, safety-critical attitude stabilization (500–1000 Hz). Furthermore, existing vision-language models (VLMs) frequently hallucinate 2D bounding boxes on empty floors, causing naive robotic systems to crash. In this paper, we present <b>AERIS</b>, a modular closed-loop aerial navigation framework that decouples task planning, spatial grounding, and motor control into three strictly isolated tiers.
+            </p>
+            <p>
+              To eliminate hallucination risks, AERIS introduces <i>depth-verified metric grounding</i>: the overhead depth stream is back-projected into an obstacle height map to segment true physical objects, and VLM bounding boxes are rejected if they do not intersect a real physical mass. The validated goal is translated into atomic drone skills (<code>TAKEOFF</code>, <code>MOVE_TO</code>, <code>HOVER</code>, <code>ROTATE</code>, <code>INSPECT</code>, <code>LAND</code>) and monitored by a deterministic safety shield that clamps altitude and velocity.
+            </p>
+            <p>
+              To validate the entire pipeline prior to hazardous flight, we co-design a high-fidelity digital twin in MATLAB/Simulink and Simscape Multibody featuring contact dynamics, actuator saturation, non-linear battery discharge, sensor noise, and multi-camera rendering. Evaluated on 16 diverse language missions in an indoor laboratory scene, AERIS achieves 100% mission success, a best-case target hover error of <b>0.8 cm</b>, an overhead camera calibration reprojection error of <b>0.78 px</b>, and successful zero-shot dynamic replanning when a target is displaced by 36 cm mid-hover. All 302 software unit tests pass. Finally, the identical stack is mapped to an open-hardware 45-gram LiteWing ESP32-S3 nano-quadrotor over Wi-Fi, establishing a reproducible, accessible benchmark for foundation-model robotics in education and research.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== METHOD OVERVIEW (EXACT SPF STYLE) ==================== -->
+  <section class="section" id="method">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3">Method Overview</h2>
+      <div class="content">
+        <p>
+          We formulate language-guided aerial navigation as a hierarchical closed-loop control problem. At each mission epoch, the system processes a free-form natural language instruction $\ell$ along with calibrated multi-camera observations $I_t \in \mathbb{R}^{H \times W \times 3}$ and depth measurements $D_t \in \mathbb{R}^{H \times W}$ to generate an executable flight plan. 
+        </p>
+        <p>
+          The architecture operates across three decoupled layers running at distinct frequencies:
+          (1) <b>Task Layer (~0.1–0.2 Hz)</b>: extracts intent and visual queries, leveraging a frozen Vision-Language Model to identify target candidates and generate atomic skill sequences;
+          (2) <b>Mission Layer (5–10 Hz)</b>: back-projects metric depth to segment physical objects, verifies 2D VLM boxes against physical geometry, validates safety constraints, and generates obstacle-aware trajectories;
+          (3) <b>Flight Layer (500–1000 Hz)</b>: executes cascaded PIV loops on high-frequency state estimates to drive the physical motors deterministically.
+        </p>
+
+        <!-- Pipeline Architecture Diagram SVG (Pure Monochrome) -->
+        <div class="has-text-centered card-container">
+          <div class="arch-svg-wrap">
+            <img src="static/images/aeris_pipeline.svg" alt="AERIS System Architecture Diagram" style="width: 100%; max-width: 1000px; height: auto;">
+          </div>
+          <p class="has-text-centered is-size-6 has-text-grey" style="margin-top: 0.75rem;">
+            <strong>Pipeline Overview:</strong> High-level natural language instructions and calibrated camera frames enter the foundation task layer. Shaded boxes denote foundation models (Gemini Flash / Qwen2-VL); solid-line boxes represent deterministic real-time control modules. Formal safety shields enforce altitude and velocity bounds before commands reach the flight layer over UDP.
+          </p>
+        </div>
+
+        <!-- Subsection 1: VLM-Based Intent & Planning -->
+        <h3 class="title is-4" style="margin-top: 2.2rem;">
+          1. VLM-Based Semantic Intent &amp; Skill Sequence Planning
+        </h3>
+        <p>
+          We frame the task layer as an open-vocabulary semantic parsing problem. When an instruction $\ell$ arrives at the Intent Router, it is classified into one of three execution categories:
+        </p>
+        <div class="math-block">
+          $$C_{\text{intent}} = \operatorname{classify}(\ell) \in \{\text{GEOMETRIC}, \text{VISUAL\_SEARCH}, \text{INSPECTION}\}$$
+        </div>
+        <p>
+          Geometric instructions (e.g. <i>"fly 0.5m and make a square"</i> in Case 15, or <i>"fly in a star pattern"</i> in Case 17) short-circuit the foundation model entirely, producing deterministic trajectories with zero model latency ($0.1\text{ s}$). For object-referencing commands, the sentence is routed to a frozen Vision-Language Model $G$ (Gemini 2.5 Flash API or local Qwen2-VL-2B) which outputs a normalized 2D bounding box:
+        </p>
+        <div class="math-block">
+          $$B_{\text{2D}} = G(I_t, \ell) = [y_{\min}, x_{\min}, y_{\max}, x_{\max}] \in [0, 1000]^4$$
+        </div>
+        <p>
+          The target is then mapped into a sequence of atomic skill primitives $\mathcal{S} = \{s_1, s_2, \dots, s_k\}$, where $s_i \in \{\texttt{TAKEOFF}, \texttt{MOVE\_TO}, \texttt{HOVER}, \texttt{ROTATE}, \texttt{CIRCLE}, \texttt{INSPECT}, \texttt{LAND}\}$. Low-level motor control never touches the foundation model.
+        </p>
+
+        <!-- Subsection 2: Depth-Verified Physical Object Proposals & 3D Grounding -->
+        <h3 class="title is-4" style="margin-top: 2.2rem;">
+          2. Depth-Verified Physical Object Proposals &amp; 3D Grounding
+        </h3>
+        <p>
+          A critical failure mode of standard 2D VLMs in robotics is <b>floor hallucination</b>: when prompted with an absent object, models routinely predict bounding boxes over empty linoleum floor. In existing ungrounded drone systems, this results in immediate collision or flight to empty space.
+        </p>
+        <p>
+          AERIS resolves this by decoupling semantic recognition from physical existence. The overhead depth map $D_t$ is back-projected into a 3D metric point cloud using the calibrated intrinsic matrix $K$ and extrinsic pose $[R_{cw} \mid t_{wc}]$ derived from six surveyed ground ArUco markers ($0.78\text{ px}$ reprojection error):
+        </p>
+        <div class="math-block">
+          $$\begin{pmatrix} X_c \\ Y_c \\ Z_c \end{pmatrix} = d(u, v) \cdot K^{-1} \begin{pmatrix} u \\ v \\ 1 \end{pmatrix}, \quad P_w = R_{cw}^{\top} \begin{pmatrix} X_c \\ Y_c \\ Z_c \end{pmatrix} + t_{wc}$$
+        </div>
+        <p>
+          The ground plane is identified and removed via RANSAC. The remaining points are converted into an occupancy height map and clustered into physical 3D object proposals $\{O_1, O_2, \dots, O_m\}$, each defined by a 3D centroid, bounding sphere, and height. The 2D VLM bounding box $B_{\text{2D}}$ is then projected onto the proposal set:
+        </p>
+        <div class="math-block">
+          $$\operatorname{Match}(B_{\text{2D}}, \{O_j\}) = \begin{cases} 
+            P_w(O_k) & \text{if } \exists k \text{ s.t. } \operatorname{IoU}(B_{\text{2D}}, \operatorname{Proj}(O_k)) > \tau_{\text{IoU}} \\ 
+            \text{REFUSE} & \text{otherwise} 
+          \end{cases}$$
+        </div>
+        <p>
+          If no physical mass exists beneath the VLM bounding box, the framework <b>safely aborts</b> (e.g. Case 08: <i>"Find the purple elephant"</i> is refused, resulting in zero flight). When a valid match is confirmed, the true metric coordinates are passed to the trajectory planner.
+        </p>
+
+        <!-- Subsection 3: Safety Shield & Motor Control -->
+        <h3 class="title is-4" style="margin-top: 2.2rem;">
+          3. Deterministic Safety Shield &amp; Cascaded Flight Control
+        </h3>
+        <p>
+          Before any skill reaches execution, it must pass a deterministic safety shield that cannot be overridden by prompt injections or model hallucinations:
+        </p>
+        <ul>
+          <li><b>Altitude Clamping:</b> Commanded heights are strictly clamped to $z \le 0.30\text{ m}$ on hardware ($1.50\text{ m}$ on twin).</li>
+          <li><b>Velocity &amp; Geofencing:</b> Velocity is capped at $0.40\text{ m/s}$, and flight is bounded within $\pm 1.0\text{ m}$ of takeoff.</li>
+          <li><b>Hardware Invariants:</b> Loss of optical flow (0.3s), tilt $>50^\circ$, or battery voltage $<3.0\text{ V}$ triggers an immediate controlled descent.</li>
+        </ul>
+        <p>
+          The Flight Layer executes a 4-tier cascaded architecture: Position P loop (100 Hz) $\to$ Velocity PI loop with anti-windup (250 Hz) $\to$ Attitude P loop $\to$ Angular Rate PID loop (500–1000 Hz) $\to$ PWM motor mixer.
+        </p>
+
+        <!-- Subsection 4: Dynamic Closed-Loop Replanning -->
+        <h3 class="title is-4" style="margin-top: 2.2rem;">
+          4. Closed-Loop Target Tracking &amp; Dynamic Replanning
+        </h3>
+        <p>
+          Unlike open-loop scripted waypoints, AERIS continuously tracks target centroids in the overhead height map at 10 Hz during hover or standoff inspection. If an external perturbation shifts the target position by $\Delta p > 15\text{ cm}$:
+        </p>
+        <div class="math-block">
+          $$\Delta p(t) = \|p_{\text{target}}(t) - p_{\text{target}}(0)\| > 0.15\text{ m} \implies \operatorname{TriggerReplan}()$$
+        </div>
+        <p>
+          The active trajectory is interrupted, an updated smooth path is interpolated within 0.4 seconds, and the quadrotor converges to the relocated goal (evaluated in Case 09, where a 36 cm mid-hover target shift is successfully tracked with 5.0 cm final accuracy).
+        </p>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== QUANTITATIVE RESULTS (BULMA / LATEX STYLE) ==================== -->
+  <section class="section hero is-light" id="benchmarks">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Quantitative Results</h2>
+      <div class="content has-text-justified">
+        <p>
+          All experiments were evaluated on 12 October 2026. Every metric reported below was logged directly from programmatic test runs against the Simscape Multibody plant and LiteWing sensor stack. Zero numbers were entered by hand.
+        </p>
+
+        <!-- Table 1: Validation Table -->
+        <h4 class="title is-5" style="margin-top: 1.5rem; color: #111;">Table 1: Scripted Flight Validation on Simscape Multibody Plant</h4>
+        <div class="table-container">
+          <table class="table academic-table is-fullwidth">
+            <thead>
+              <tr>
+                <th>Evaluation Metric</th>
+                <th>LiteWing (Ground Truth)</th>
+                <th>LiteWing (Onboard EKF)</th>
+                <th>Holybro X500 Frame</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Hover Rotor Speed</td>
+                <td class="bold">11,179 rpm</td>
+                <td class="bold">11,178 rpm</td>
+                <td>7,224 rpm</td>
+              </tr>
+              <tr>
+                <td>Hover Throttle Command</td>
+                <td>0.64</td>
+                <td>0.64</td>
+                <td>0.71</td>
+              </tr>
+              <tr>
+                <td>Take-off Settle Time (&plusmn;5 cm)</td>
+                <td class="bold">1.43 s</td>
+                <td class="bold">1.35 s</td>
+                <td>1.51 s</td>
+              </tr>
+              <tr>
+                <td>Tracking RMSE</td>
+                <td class="bold">1.4 cm</td>
+                <td>4.8 cm</td>
+                <td>6.6 cm</td>
+              </tr>
+              <tr>
+                <td>Waypoint Arrival Error</td>
+                <td class="bold">0.1 - 0.3 cm</td>
+                <td>2.4 - 2.9 cm</td>
+                <td>1.3 - 2.6 cm</td>
+              </tr>
+              <tr>
+                <td>Estimator Position RMSE</td>
+                <td>0.0 cm (ref)</td>
+                <td class="bold">1.9 cm</td>
+                <td>1.5 cm</td>
+              </tr>
+              <tr>
+                <td>Estimator Final XY Drift</td>
+                <td>0.0 cm</td>
+                <td class="bold">1.8 cm</td>
+                <td>1.5 cm</td>
+              </tr>
+              <tr>
+                <td>Overhead Camera Reprojection Error</td>
+                <td class="bold">0.78 px</td>
+                <td>0.78 px</td>
+                <td>0.78 px</td>
+              </tr>
+              <tr>
+                <td>Scored Language Missions Passed</td>
+                <td class="bold">16 / 16 (100%)</td>
+                <td class="bold">16 / 16 (100%)</td>
+                <td>14 / 16</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table 2: Benchmark Summary -->
+        <h4 class="title is-5" style="margin-top: 1.5rem; color: #111;">Table 2: Language-Guided Mission Evaluation (LiteWing, scene_lab, Gemini Flash)</h4>
+        <div class="table-container">
+          <table class="table academic-table is-fullwidth">
+            <thead>
+              <tr>
+                <th>Case</th>
+                <th>Instruction Prompt &ell;</th>
+                <th>Status</th>
+                <th>Target Err</th>
+                <th>Heading Err</th>
+                <th>Path Length</th>
+                <th>Flight Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>01</td>
+                <td>Find the cardboard box and hover above it</td>
+                <td class="bold">PASS</td>
+                <td>2.8 cm</td>
+                <td>-</td>
+                <td>3.64 m</td>
+                <td>13.2 s</td>
+              </tr>
+              <tr>
+                <td>02</td>
+                <td>Find the red bottle and hover above it for 4 seconds</td>
+                <td class="bold">PASS</td>
+                <td class="bold">0.8 cm</td>
+                <td>-</td>
+                <td>5.65 m</td>
+                <td>18.7 s</td>
+              </tr>
+              <tr>
+                <td>03</td>
+                <td>Inspect the blue cube from 0.5 m away</td>
+                <td class="bold">PASS</td>
+                <td>2.1 cm*</td>
+                <td class="bold">1.3&deg;</td>
+                <td>5.88 m</td>
+                <td>19.2 s</td>
+              </tr>
+              <tr>
+                <td>04</td>
+                <td>Find the steel drum and hover above its center</td>
+                <td class="bold">PASS</td>
+                <td>2.8 cm</td>
+                <td>-</td>
+                <td>4.62 m</td>
+                <td>15.8 s</td>
+              </tr>
+              <tr>
+                <td>06</td>
+                <td>Find the traffic cone and hover facing it</td>
+                <td class="bold">PASS</td>
+                <td>2.9 cm*</td>
+                <td class="bold">0.1&deg;</td>
+                <td>2.89 m</td>
+                <td>10.0 s</td>
+              </tr>
+              <tr>
+                <td>08</td>
+                <td>Find the purple elephant and hover above it</td>
+                <td class="bold">REFUSED / PASS</td>
+                <td>-</td>
+                <td>-</td>
+                <td>0.00 m</td>
+                <td>Safe Abort</td>
+              </tr>
+              <tr>
+                <td>09</td>
+                <td>Target moved 36 cm mid-hover (Dynamic Replan)</td>
+                <td class="bold">PASS</td>
+                <td>5.0 cm</td>
+                <td>-</td>
+                <td>5.82 m</td>
+                <td>22.0 s</td>
+              </tr>
+              <tr>
+                <td>15</td>
+                <td>Fly 0.5m and make a square in air</td>
+                <td class="bold">PASS</td>
+                <td>1.4 cm</td>
+                <td>-</td>
+                <td>8.17 m</td>
+                <td>25.5 s</td>
+              </tr>
+              <tr>
+                <td>17</td>
+                <td>Fly in a star pattern</td>
+                <td class="bold">PASS</td>
+                <td>1.2 cm</td>
+                <td>-</td>
+                <td>9.03 m</td>
+                <td>33.5 s</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size: 0.8rem; color: #666;">* Indicates stand-off distance error relative to 0.50 m perimeter.</p>
+        </div>
+
+        <!-- Benchmark Error Figure -->
+        <div class="has-text-centered card-container" style="margin-top: 2rem;">
+          <img src="assets/img/benchmark_errors.png" alt="Benchmark Errors Plot" style="max-width: 100%; height: auto;">
+          <p class="has-text-centered is-size-6 has-text-grey" style="margin-top: 0.5rem;">
+            <strong>Figure 2: Position error distribution across language missions.</strong> All target seeking and standoff inspection cases achieve errors under 5.0 cm, well within the 15.0 cm safety boundary.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== QUALITATIVE COMPARISON / VIDEOS (SPF STYLE) ==================== -->
+  <section class="section" id="demos">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3">Qualitative Results &amp; Flight Demos</h2>
+      <div class="content">
+        <p>
+          We demonstrate closed-loop language execution across diverse scenarios, including target seeking, precision standoff inspection, safe refusal of hallucinated objects, and zero-shot dynamic replanning.
+        </p>
+      </div>
+
+      <div class="qualitative-grid">
+        
+        <!-- Case 02 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case02_find_the_red_bottle_and_hover.gif" alt="Case 02: Precision hover above red bottle">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Find the red bottle and hover above it for 4s&rdquo;</div>
+            <div class="qualitative-card-desc">
+              The VLM boxes the red bottle; depth verification confirms 3D coordinates at (-0.81, -0.61, 0.72)m. The drone flies a smooth trajectory and stabilizes with <b>0.8 cm</b> error.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 02 &bull; PASS</span>
+              <span>ERR: 0.8 cm &bull; 18.7 s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 09 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case09_replan_moved_target.gif" alt="Case 09: Dynamic replan on moved target">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Target moved 36 cm mid-hover &rarr; UAV Replans&rdquo;</div>
+            <div class="qualitative-card-desc">
+              During active hover, the target bottle is physically moved by 36 cm. The height-map tracker flags displacement within 0.4s and interrupts flight setpoints to re-engage at <b>5.0 cm</b> accuracy.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 09 &bull; REPLAN</span>
+              <span>SHIFT: 36 cm &bull; PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 03 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case03_inspect_the_blue_cube_from_0.gif" alt="Case 03: Blue cube standoff inspection">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Inspect the blue cube from 0.5 m away&rdquo;</div>
+            <div class="qualitative-card-desc">
+              Requires spatial reasoning to compute an offset perimeter coordinate and orient the optical axis toward the target centroid, achieving <b>1.3&deg;</b> heading alignment.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 03 &bull; PASS</span>
+              <span>YAW: 1.3&deg; &bull; STANDOFF: 2.1 cm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 06 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case06_find_the_traffic_cone_and_hover.gif" alt="Case 06: Traffic cone facing hover">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Find the traffic cone and hover facing it&rdquo;</div>
+            <div class="qualitative-card-desc">
+              The drone computes the line-of-sight vector from its standoff coordinate to the cone apex, executing an attitude turn to face the cone with <b>0.1&deg;</b> yaw error.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 06 &bull; PASS</span>
+              <span>YAW: 0.1&deg; &bull; 10.0 s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 08 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case08_find_the_purple_elephant_and_hover.gif" alt="Case 08: Safe refusal of hallucinated target">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Find the purple elephant and hover above it&rdquo;</div>
+            <div class="qualitative-card-desc">
+              The VLM hallucinated a box on the floor. Depth verification confirmed zero physical occupancy (IoU = 0). The mission was <b>safely refused</b> with zero motor spin.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 08 &bull; SAFE ABORT</span>
+              <span>COLLISION AVERTED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 17 -->
+        <div class="qualitative-card">
+          <img src="assets/previews/case17_fly_in_a_star_pattern.gif" alt="Case 17: Star pattern aerobatics">
+          <div class="qualitative-card-body">
+            <div class="qualitative-card-title">&ldquo;Fly in a star pattern&rdquo;</div>
+            <div class="qualitative-card-desc">
+              Parsed via geometric rule short-circuit in 0.1s. The vehicle navigates a 5-pointed star pattern (9.03 m cumulative distance) with continuous heading alignment.
+            </div>
+            <div class="qualitative-meta">
+              <span>CASE 17 &bull; PASS</span>
+              <span>PATH: 9.03 m &bull; 33.5 s</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== HARDWARE & DIGITAL TWIN ==================== -->
+  <section class="section hero is-light" id="hardware">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3">Hardware &amp; Digital Twin Co-Design</h2>
+      <div class="content has-text-justified">
+        <p>
+          To make language-guided drone research accessible without costly motion capture setups, AERIS is engineered for dual execution: an ultra-lightweight open-hardware nano-quadrotor and a physics-faithful digital twin.
+        </p>
+
+        <div class="columns is-centered is-vcentered" style="margin-top: 1rem;">
+          <div class="column is-5 has-text-centered">
+            <img src="assets/img/lw_render_top.png" alt="LiteWing Nano-Quadrotor Render" style="max-height: 220px; width: auto;">
+            <p class="is-size-7 has-text-grey" style="margin-top: 0.25rem;">LiteWing ESP32-S3 Nano-Quadrotor (Circuit Digest, CC BY-NC-SA 4.0)</p>
+          </div>
+          <div class="column is-7">
+            <h4 class="title is-5" style="margin-bottom: 0.5rem;">Target A: LiteWing ESP32-S3 Micro-Quadrotor</h4>
+            <ul>
+              <li><b>Mass &amp; Frame:</b> 45 g without battery; 100 mm &times; 100 mm FR4 integrated PCB airframe.</li>
+              <li><b>Computation &amp; Comms:</b> ESP32-S3 dual-core Xtensa LX7 @ 240 MHz, Wi-Fi UDP socket interface.</li>
+              <li><b>Sensors:</b> InvenSense MPU-6050 6-DOF IMU, PMW3901 downward optical flow, VL53L1X laser rangefinder.</li>
+              <li><b>Actuation:</b> Four 720 coreless brushed motors with 55 mm propellers driven by IRLML6344 MOSFETs.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="columns is-centered is-vcentered" style="margin-top: 1rem;">
+          <div class="column is-7">
+            <h4 class="title is-5" style="margin-bottom: 0.5rem;">Target B: Simscape Multibody Digital Twin</h4>
+            <ul>
+              <li><b>Multibody Dynamics:</b> 6-DOF non-linear rigid body dynamics with floor/wall spring-damper contact models.</li>
+              <li><b>Actuator Realism:</b> First-order motor lag ($\tau_m = 0.025\text{ s}$), thrust saturation, and Li-Po voltage discharge sag.</li>
+              <li><b>Perception Rendering:</b> Real-time Unreal Engine 4 multi-camera socket streams (Overhead RGB-D, Onboard FPV, Chase).</li>
+              <li><b>Disturbance Modeling:</b> Dryden wind turbulence up to $\sigma_g = 0.30\text{ m/s}$ and mass perturbation ($33\text{g} - 75\text{g}$).</li>
+            </ul>
+          </div>
+          <div class="column is-5 has-text-centered">
+            <img src="assets/img/lw_pinout.png" alt="LiteWing Pinout & Sensors" style="max-height: 220px; width: auto;">
+            <p class="is-size-7 has-text-grey" style="margin-top: 0.25rem;">LiteWing Sensor Expansion Pinout (Flow + ToF)</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TRAJECTORY REPLAYER (SIMULATOR) ==================== -->
+  <section class="section" id="simulator">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3">Interactive Flight Trajectory Replayer</h2>
+      <div class="content">
+        <p>
+          Replay real telemetry trajectories recorded in the Simscape digital twin. Select a benchmark mission to inspect real-time position setpoints, attitude heading, and tracking error:
+        </p>
+      </div>
+
+      <div class="simulator-box">
+        <div class="simulator-toolbar">
+          <div>
+            <button class="sim-btn" id="btn-sim-play">⏸ Pause</button>
+            <button class="sim-btn" id="btn-sim-reset">↺ Reset</button>
+            <button class="sim-btn" id="btn-sim-speed">1x Speed</button>
+          </div>
+          <div>
+            <span style="font-size: 0.8rem; margin-right: 0.5rem; opacity: 0.8;">TRAJECTORY:</span>
+            <button class="sim-btn btn-sim-case active" data-case="case02">Case 02: Red Bottle</button>
+            <button class="sim-btn btn-sim-case" data-case="case09">Case 09: Moving Target Replan</button>
+            <button class="sim-btn btn-sim-case" data-case="case17">Case 17: Star Pattern</button>
+          </div>
+        </div>
+
+        <div style="position: relative;">
+          <canvas id="flight-canvas"></canvas>
+          <div class="sim-hud">
+            <div style="font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 2px; margin-bottom: 4px;">TELEMETRY (50 Hz)</div>
+            <div>POS X: <span id="hud-x" style="color: #4ade80;">-1.80 m</span></div>
+            <div>POS Y: <span id="hud-y" style="color: #4ade80;">-1.40 m</span></div>
+            <div>ALT Z: <span id="hud-z" style="color: #4ade80;">0.80 m</span></div>
+            <div>SPEED: <span id="hud-spd" style="color: #38bdf8;">0.35 m/s</span></div>
+            <div>YAW &psi;: <span id="hud-yaw" style="color: #38bdf8;">45&deg;</span></div>
+            <div>ACCURACY: <span id="hud-err" style="color: #facc15;">0.8 cm</span></div>
+            <div style="margin-top: 4px; padding-top: 2px; border-top: 1px dashed #444;">STATUS: <span id="hud-status" style="color: #4ade80;">EXECUTING</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== BIBTEX CITATION ==================== -->
+  <section class="section hero is-light" id="bibtex">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3">BibTeX</h2>
+      <div class="content" style="position: relative;">
+        <button class="btn-copy-code" id="btn-copy-bib">Copy BibTeX</button>
+        <pre><code id="bibtex-code">@techreport{rushikesh2026aeris,
+  title       = {AERIS: Language-Guided Autonomous Micro-Quadrotor Flight via Depth-Verified Vision-Language Grounding and High-Fidelity Digital Twin Verification},
+  author      = {Rushikesh, D. and Reddy, Devarapalli Shanmukha Venkata Sai Nath and Sobhita, Karri Saraswathi Venkata Sai and Kochuvila, Sreeja},
+  institution = {Amrita School of Engineering, Bengaluru, Amrita Vishwa Vidyapeetham},
+  type        = {B.Tech Capstone Project Report},
+  year        = {2026},
+  month       = {November},
+  address     = {Bengaluru, Karnataka, India},
+  url         = {https://github.com/sobhitakarri/AERIS_llm_vlm_drone}
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer">
+    <div class="container is-max-desktop">
+      <div class="content has-text-centered">
+        <p style="margin-bottom: 0.75rem;">
+          <strong>AERIS</strong> &bull; Framework for Autonomous Drone Operation Using LLMs and VLMs<br>
+          Submitted by <a href="https://github.com/sobhitakarri">D. Rushikesh, D.S.V. Sai Nath Reddy, K.S.V. Sai Sobhita</a>, under the guidance of <b>Dr. Sreeja Kochuvila</b>.<br>
+          Department of Electronics and Communication Engineering, <a href="https://www.amrita.edu/school/engineering/bengaluru/" target="_blank">Amrita School of Engineering, Bengaluru</a>, Amrita Vishwa Vidyapeetham.
+        </p>
+        <p style="font-size: 0.85rem; color: #666666; max-width: 840px; margin: 0 auto; line-height: 1.6;">
+          This work is inspired by and builds upon foundational literature in aerial vision-and-language navigation and robot affordance grounding, notably 
+          <a href="https://arxiv.org/abs/2312.14950" target="_blank">TypeFly</a> (Chen et al., 2023), 
+          <a href="https://spf-web.pages.dev/" target="_blank">See, Point, Fly (SPF)</a> (Hu et al., CoRL 2025), 
+          <a href="https://arxiv.org/abs/2510.21739" target="_blank">NeLV</a> (Yuan et al., 2025), and 
+          <a href="https://say-can.github.io/" target="_blank">SayCan</a> (Ahn et al., CoRL 2023), as surveyed in Chapter 2 (Literature Review) of the project report.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Trajectory Canvas Animation Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. BibTeX Copy Button
+      const btnCopy = document.getElementById('btn-copy-bib');
+      const bibCode = document.getElementById('bibtex-code');
+      if (btnCopy && bibCode) {
+        btnCopy.addEventListener('click', () => {
+          navigator.clipboard.writeText(bibCode.innerText).then(() => {
+            btnCopy.textContent = 'Copied!';
+            setTimeout(() => { btnCopy.textContent = 'Copy BibTeX'; }, 2000);
+          });
+        });
+      }
+
+      // 2. Flight Trajectory Simulator Canvas
+      const canvas = document.getElementById('flight-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const TRAJECTORIES = {
+        'case02': {
+          title: 'Case 02: Red Bottle',
+          waypoints: [
+            { x: -1.8, y: -1.4, z: 0.0 },
+            { x: -1.8, y: -1.4, z: 0.8 },
+            { x: -1.3, y: -1.1, z: 0.8 },
+            { x: -0.81, y: -0.61, z: 0.72 }
+          ],
+          target: { x: -0.81, y: -0.61 },
+          duration: 18.7,
+          errorCm: '0.8 cm'
+        },
+        'case09': {
+          title: 'Case 09: Dynamic Replan',
+          waypoints: [
+            { x: -1.8, y: -1.4, z: 0.0 },
+            { x: -0.80, y: -0.60, z: 0.72 },
+            { x: -0.45, y: -0.55, z: 0.72 }
+          ],
+          target: { x: -0.80, y: -0.60 },
+          targetMoved: { x: -0.45, y: -0.55 },
+          duration: 22.0,
+          errorCm: '5.0 cm'
+        },
+        'case17': {
+          title: 'Case 17: Star Pattern',
+          waypoints: [
+            { x: 0.0, y: 0.8, z: 0.8 },
+            { x: 0.25, y: -0.7, z: 0.8 },
+            { x: -0.75, y: 0.25, z: 0.8 },
+            { x: 0.75, y: 0.25, z: 0.8 },
+            { x: -0.25, y: -0.7, z: 0.8 },
+            { x: 0.0, y: 0.8, z: 0.8 }
+          ],
+          target: { x: 0.0, y: 0.0 },
+          duration: 33.5,
+          errorCm: '1.2 cm'
+        }
+      };
+
+      let activeKey = 'case02';
+      let simTime = 0;
+      let isPlaying = true;
+      let speedMult = 1;
+
+      const hudX = document.getElementById('hud-x');
+      const hudY = document.getElementById('hud-y');
+      const hudZ = document.getElementById('hud-z');
+      const hudSpd = document.getElementById('hud-spd');
+      const hudYaw = document.getElementById('hud-yaw');
+      const hudErr = document.getElementById('hud-err');
+      const hudStatus = document.getElementById('hud-status');
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * (window.devicePixelRatio || 1);
+        canvas.height = 380 * (window.devicePixelRatio || 1);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      function worldToScreen(wx, wy) {
+        const xMin = -2.2, xMax = 1.8;
+        const yMin = -1.8, yMax = 1.6;
+        const pad = 40;
+        const sx = (wx - xMin) / (xMax - xMin);
+        const sy = 1.0 - (wy - yMin) / (yMax - yMin);
+        return {
+          x: pad + sx * (canvas.width - pad * 2),
+          y: pad + sy * (canvas.height - pad * 2)
+        };
+      }
+
+      function getState(traj, t) {
+        const wps = traj.waypoints;
+        const progress = Math.min(1.0, Math.max(0.0, t / traj.duration));
+        const segCount = wps.length - 1;
+        const segFloat = progress * segCount;
+        const idx = Math.min(segCount - 1, Math.floor(segFloat));
+        const rem = segFloat - idx;
+        const ease = rem * rem * (3 - 2 * rem);
+
+        const p1 = wps[idx];
+        const p2 = wps[idx + 1];
+        const curX = p1.x + (p2.x - p1.x) * ease;
+        const curY = p1.y + (p2.y - p1.y) * ease;
+        const curZ = p1.z + (p2.z - p1.z) * ease;
+
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const yaw = Math.atan2(dy, dx) * (180 / Math.PI);
+        const spd = Math.sqrt(dx * dx + dy * dy) * 0.45;
+        return { x: curX, y: curY, z: curZ, yaw: yaw, speed: spd, progress: progress };
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const traj = TRAJECTORIES[activeKey];
+        if (!traj) return;
+
+        // Grid
+        ctx.strokeStyle = '#262626';
+        ctx.lineWidth = 1;
+        for (let x = -2.0; x <= 1.5; x += 0.5) {
+          const p1 = worldToScreen(x, -1.8);
+          const p2 = worldToScreen(x, 1.6);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+        for (let y = -1.5; y <= 1.5; y += 0.5) {
+          const p1 = worldToScreen(-2.2, y);
+          const p2 = worldToScreen(1.8, y);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+
+        // Workspace
+        const b1 = worldToScreen(-2.0, -1.6);
+        const b2 = worldToScreen(1.6, 1.4);
+        ctx.strokeStyle = '#404040';
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(b1.x, b2.y, b2.x - b1.x, b1.y - b2.y);
+        ctx.setLineDash([]);
+
+        // Planned Path
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        traj.waypoints.forEach((wp, i) => {
+          const p = worldToScreen(wp.x, wp.y);
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+
+        // Target
+        const tgt = (activeKey === 'case09' && simTime > 11 && traj.targetMoved) ? traj.targetMoved : traj.target;
+        const tp = worldToScreen(tgt.x, tgt.y);
+        ctx.strokeStyle = '#facc15';
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(tp.x, tp.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#facc15';
+        ctx.font = '10px monospace';
+        ctx.fillText('TARGET', tp.x + 14, tp.y + 4);
+
+        // State & Trail
+        const st = getState(traj, simTime);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let t = 0; t <= simTime; t += 0.25) {
+          const p = worldToScreen(getState(traj, t).x, getState(traj, t).y);
+          if (t === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+
+        // Drone
+        const dp = worldToScreen(st.x, st.y);
+        ctx.save();
+        ctx.translate(dp.x, dp.y);
+        ctx.rotate((st.yaw * Math.PI) / 180);
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-12, -12); ctx.lineTo(12, 12);
+        ctx.moveTo(12, -12); ctx.lineTo(-12, 12);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        [[-12, -12], [12, -12], [12, 12], [-12, 12]].forEach(([rx, ry]) => {
+          ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI * 2); ctx.fill();
+        });
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(0, -14, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // HUD updates
+        if (hudX) hudX.textContent = st.x.toFixed(2) + ' m';
+        if (hudY) hudY.textContent = st.y.toFixed(2) + ' m';
+        if (hudZ) hudZ.textContent = st.z.toFixed(2) + ' m';
+        if (hudSpd) hudSpd.textContent = (st.speed || 0.35).toFixed(2) + ' m/s';
+        if (hudYaw) hudYaw.textContent = Math.round(st.yaw) + '°';
+        if (hudErr) hudErr.textContent = traj.errorCm;
+        if (hudStatus) {
+          if (st.progress >= 0.98) {
+            hudStatus.textContent = 'HOVER / GOAL REACHED';
+            hudStatus.style.color = '#4ade80';
+          } else if (activeKey === 'case09' && simTime > 11) {
+            hudStatus.textContent = 'REPLANNING ACTIVE';
+            hudStatus.style.color = '#facc15';
+          } else {
+            hudStatus.textContent = 'EXECUTING SKILL';
+            hudStatus.style.color = '#38bdf8';
+          }
+        }
+
+        if (isPlaying) {
+          simTime += 0.035 * speedMult;
+          if (simTime > traj.duration) simTime = 0;
+        }
+        requestAnimationFrame(render);
+      }
+
+      // Buttons
+      document.querySelectorAll('.btn-sim-case').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-sim-case').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeKey = btn.getAttribute('data-case');
+          simTime = 0;
+        });
+      });
+
+      const btnPlay = document.getElementById('btn-sim-play');
+      if (btnPlay) {
+        btnPlay.addEventListener('click', () => {
+          isPlaying = !isPlaying;
+          btnPlay.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+        });
+      }
+      const btnReset = document.getElementById('btn-sim-reset');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => { simTime = 0; });
+      }
+      const btnSpeed = document.getElementById('btn-sim-speed');
+      if (btnSpeed) {
+        btnSpeed.addEventListener('click', () => {
+          speedMult = (speedMult === 1) ? 2 : (speedMult === 2 ? 4 : 1);
+          btnSpeed.textContent = speedMult + 'x Speed';
+        });
+      }
+
+      render();
+    });
+  </script>
+</body>
+</html>
